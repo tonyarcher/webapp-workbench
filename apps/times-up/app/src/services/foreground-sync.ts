@@ -52,6 +52,11 @@ export function startForegroundSync(getFeedIds: () => string[] | undefined): voi
     if (!document.hidden && document.hasFocus()) void runSync();
 }
 
+/** A service-worker wake runs the same loop as the timer, under the tab's auth epoch. */
+export function triggerForegroundSync(): void {
+    if (started) void runSync();
+}
+
 export function stopForegroundSync(): void {
     if (!started || typeof window === 'undefined') return;
     started = false;

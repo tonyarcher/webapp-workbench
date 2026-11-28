@@ -4,7 +4,8 @@ import { dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { startAppBadge, stopAppBadge } from '../../services/app-badge';
 import { startAlertNotifications, stopAlertNotifications } from '../../services/alert-notifications';
-import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
+import { startBackgroundSync, stopBackgroundSync } from '../../services/background-sync';
+import { startForegroundSync, stopForegroundSync, triggerForegroundSync } from '../../services/foreground-sync';
 import { currentUsername, hasSession } from '../../services/auth';
 import { fetchArticleById } from '../../services/api';
 import { sharedLinkFromParams } from '../../services/shared-links';
@@ -184,6 +185,7 @@ export class AppShell extends HTMLElement {
             startInterestingCountsRefresh();
             startAppBadge();
             startAlertNotifications();
+            void startBackgroundSync(triggerForegroundSync);
             startForegroundSync(this.autoSyncFeedIds);
             void this.resolveDeepLink();
         }
@@ -201,6 +203,7 @@ export class AppShell extends HTMLElement {
         stopInterestingCountsRefresh();
         stopAppBadge();
         stopAlertNotifications();
+        void stopBackgroundSync();
         stopForegroundSync();
         this.unsubscribeToasts?.();
         this.unsubscribeToasts = null;

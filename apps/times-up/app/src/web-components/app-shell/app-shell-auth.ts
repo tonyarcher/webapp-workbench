@@ -2,7 +2,7 @@ import { clearClientDb } from '../../db/db';
 import { bustCounts, queryClient } from '../../query';
 import { currentUsername, hasSession, logout, startLogin } from '../../services/auth';
 import { clearToasts, type ToastNotice } from '../../services/toast';
-import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
+import { startForegroundSync, stopForegroundSync, triggerForegroundSync } from '../../services/foreground-sync';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { startAppBadge, stopAppBadge, clearAppBadge } from '../../services/app-badge';
 import {
@@ -10,6 +10,7 @@ import {
     stopAlertNotifications,
     clearAlertSnapshot,
 } from '../../services/alert-notifications';
+import { startBackgroundSync, stopBackgroundSync } from '../../services/background-sync';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
 import { forgetLearning } from '../../services/interesting-settings';
 
@@ -55,11 +56,13 @@ export function onAuthChanged(host: AppShellAuthHost): void {
         startInterestingCountsRefresh();
         startAppBadge();
         startAlertNotifications();
+        void startBackgroundSync(triggerForegroundSync);
         startForegroundSync(host.autoSyncFeedIds);
     } else {
         stopInterestingCountsRefresh();
         stopAppBadge();
         stopAlertNotifications();
+        void stopBackgroundSync();
         stopForegroundSync();
     }
 }
@@ -80,6 +83,7 @@ export function signOut(host: AppShellAuthHost): void {
     stopAppBadge();
     stopAlertNotifications();
     clearAlertSnapshot();
+    void stopBackgroundSync();
     void clearAppBadge();
     stopForegroundSync();
     void resetAccount(host).catch(() => {

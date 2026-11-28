@@ -90,6 +90,22 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
+// Background refresh (S6). The worker wakes open tabs; the tab's foreground
+// sync owns the fetch and auth. No token or account state crosses the boundary.
+function wakeClients() {
+    return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) client.postMessage({ type: 'times-up:background-sync' });
+    });
+}
+
+self.addEventListener('sync', (event) => {
+    if (event.tag === 'times-up-sync') event.waitUntil(wakeClients());
+});
+
+self.addEventListener('periodicsync', (event) => {
+    if (event.tag === 'times-up-periodic') event.waitUntil(wakeClients());
+});
+
 // Notification clicks (S3/S5). The page sends a route it already parses; the
 // worker keeps its own allow-list so notification data can never become an
 // arbitrary navigation target. Routes are hash paths, matching the app router.
