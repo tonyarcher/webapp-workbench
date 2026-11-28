@@ -106,6 +106,25 @@
     color: var(--danger);
 }
 
+.delta-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    background: var(--panel-bg);
+}
+
+.delta-card h3 {
+    margin: 0 0 6px;
+    font-size: 13px;
+}
+
+.delta-topics {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
 .summary-card {
     border: 1px solid var(--border);
     border-radius: 10px;

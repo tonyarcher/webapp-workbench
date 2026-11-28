@@ -1,4 +1,11 @@
 import { fetchArticleById, fetchEdition, fetchEditions } from '../../services/api';
+import { fetchTopClusters } from '../../services/api-clusters';
+import {
+    diffBriefClusters,
+    loadBriefClusterSnapshot,
+    saveBriefClusterSnapshot,
+    type BriefClusterDelta,
+} from '../../services/brief-delta';
 import {
     BRIEF_TIERS,
     BRIEF_TIER_LABELS,
@@ -38,6 +45,9 @@ export class BriefView extends HTMLElement {
     private loading = true;
     private root: HTMLDivElement | null = null;
     private readonly scrollByTier = new Map<BriefTier, number>();
+    private clusterDelta: BriefClusterDelta = { newClusters: [], growingClusters: [] };
+    private hasClusterSnapshot = false;
+    private deltaReady = false;
 
     connectedCallback() {
         const shadow = this.attachShadow({ mode: 'open' });
@@ -52,16 +62,26 @@ export class BriefView extends HTMLElement {
 
     private async load() {
         this.loading = true;
+        this.deltaReady = false;
         this.paint();
         try {
-            this.editions = await fetchEditions(10);
+            const [nextEditions, clusters] = await Promise.all([fetchEditions(10), fetchTopClusters(20)]);
+            this.editions = nextEditions;
+            const previous = loadBriefClusterSnapshot();
+            this.clusterDelta = diffBriefClusters(clusters, previous);
+            this.hasClusterSnapshot = previous !== null;
             const first = this.editions[0];
             if (first) this.current = await fetchEdition(first.id);
             this.tiers = buildBriefTiers(this.current?.sections ?? []);
+            saveBriefClusterSnapshot(clusters);
+            this.deltaReady = true;
         } catch {
             this.editions = [];
             this.current = null;
             this.tiers = buildBriefTiers([]);
+            this.clusterDelta = { newClusters: [], growingClusters: [] };
+            this.hasClusterSnapshot = false;
+            this.deltaReady = false;
         }
         this.loading = false;
         this.paint();
@@ -87,12 +107,15 @@ export class BriefView extends HTMLElement {
         body.tabIndex = 0;
         if (this.loading) {
             body.appendChild(this.empty('Loading…'));
-        } else if (!this.current) {
-            body.appendChild(this.empty('No brief available yet.'));
         } else {
-            if (this.current.opinion) body.appendChild(this.summaryCard(this.current.opinion));
-            for (const section of this.tiers[this.tier]) {
-                body.appendChild(this.section(section, this.tier === 'deep' ? this.allSourceIds(section) : []));
+            if (this.deltaReady) body.appendChild(this.deltaCard());
+            if (!this.current) {
+                body.appendChild(this.empty('No brief available yet.'));
+            } else {
+                if (this.current.opinion) body.appendChild(this.summaryCard(this.current.opinion));
+                for (const section of this.tiers[this.tier]) {
+                    body.appendChild(this.section(section, this.tier === 'deep' ? this.allSourceIds(section) : []));
+                }
             }
         }
         this.root.appendChild(body);
@@ -121,6 +144,32 @@ export class BriefView extends HTMLElement {
         node.className = 'empty';
         node.textContent = text;
         return node;
+    }
+
+    private deltaCard(): HTMLElement {
+        const card = document.createElement('section');
+        card.className = 'delta-card';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Since your last visit';
+        card.appendChild(heading);
+        const newCount = this.clusterDelta.newClusters.length;
+        const growingCount = this.clusterDelta.growingClusters.length;
+        const text = !this.hasClusterSnapshot
+            ? `${newCount} developing topic${newCount === 1 ? '' : 's'} in your library.`
+            : newCount === 0 && growingCount === 0
+              ? 'Nothing new since your last visit.'
+              : `${newCount} new topic${newCount === 1 ? '' : 's'} · ${growingCount} growing.`;
+        card.appendChild(document.createTextNode(text));
+        const labels = [...this.clusterDelta.newClusters, ...this.clusterDelta.growingClusters]
+            .slice(0, 5)
+            .map((cluster) => cluster.label);
+        if (labels.length) {
+            const list = document.createElement('p');
+            list.className = 'delta-topics';
+            list.textContent = labels.join(' · ');
+            card.appendChild(list);
+        }
+        return card;
     }
 
     private summaryCard(text: string): HTMLDivElement {

@@ -14,6 +14,32 @@ export interface ClusterMember {
     publishedAt: number;
 }
 
+export interface TopicCluster {
+    id: string;
+    label: string;
+    memberCount: number;
+    growthRate: number;
+    firstSeen: number;
+    lastSeen: number;
+}
+
+export function parseTopicClusters(value: unknown): TopicCluster[] {
+    const items = (value as { clusters?: unknown } | null)?.clusters;
+    if (!Array.isArray(items)) return [];
+    return items.filter(
+        (item): item is TopicCluster =>
+            !!item &&
+            typeof item === 'object' &&
+            typeof (item as TopicCluster).id === 'string' &&
+            typeof (item as TopicCluster).label === 'string' &&
+            typeof (item as TopicCluster).memberCount === 'number',
+    );
+}
+
+export async function fetchTopClusters(limit = 20): Promise<TopicCluster[]> {
+    return parseTopicClusters(await apiFetch(`/clusters?limit=${limit}`));
+}
+
 /** Cluster for the open article, or null when it has no learned topic group. */
 export async function fetchArticleCluster(articleId: string): Promise<ArticleCluster | null> {
     return (await apiFetch(`/articles/${encodeURIComponent(articleId)}/cluster`)) as ArticleCluster | null;
