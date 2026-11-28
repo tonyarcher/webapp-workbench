@@ -1,11 +1,21 @@
-import { addFeed, exportOpmlFile, importOpmlFile, syncAllFeeds } from '../../mutations';
-import { migrateLibrary } from '../../services/api';
+import {
+    addFeed,
+    createSavedSearch,
+    exportOpmlFile,
+    importOpmlFile,
+    setFeedFolderMembership,
+    setSavedSearchAlert,
+    syncAllFeeds,
+} from '../../mutations';
+import { addFolder, migrateLibrary } from '../../services/api';
 import { normalizeMastodonHost, type ShareTarget } from '../../services/share';
 import { fetchLibrary, invalidateArticles, invalidateLibrary } from '../../query';
 import { navigate } from '../../router';
 import { ALL_SHARE_TARGETS, loadShareTargets, saveMastodonHost, saveShareTargets } from '../../services/share-settings';
 import { buildMigratePayload, readIdbForMigration } from '../../services/migrate-export';
-import { archiveToText, buildArchive } from '../../services/portable-export';
+import { archiveToText, buildArchive, parseArchive } from '../../services/portable-export';
+import { importArchive, isArchiveFile } from '../../services/archive-import';
+import { saveMuteRules } from '../../services/mute-rules';
 
 export type ExportFormat = 'json' | 'text' | 'opml';
 
@@ -101,8 +111,28 @@ export async function importFile(host: FeedsHost, event: Event): Promise<void> {
     host.status = '';
     host.statusError = false;
     try {
-        const xml = await file.text();
-        const result = await importOpmlFile(xml);
+        const text = await file.text();
+        const archiveFile = isArchiveFile(file.name);
+        const archive = archiveFile ? parseArchive(text) : null;
+        if (archiveFile && !archive) throw new Error('Invalid Times Up archive or unsupported version.');
+        if (archive) {
+            const result = await importArchive(archive, {
+                addFolder,
+                addFeed,
+                setFeedFolders: setFeedFolderMembership,
+                createSavedSearch,
+                setSavedSearchAlert,
+                saveMuteRules,
+            });
+            const skipped = result.skipped > 0 ? `, ${result.skipped} skipped` : '';
+            host.status = `Imported ${result.folders} folders, ${result.feeds} feeds, ${result.searches} searches, ${result.rules} mute rules${skipped}. Syncing articles.`;
+            await syncAllFeeds((done: number, total: number) => {
+                host.status = `Syncing ${done + 1}/${total}.`;
+            });
+            host.status = 'Import complete';
+            return;
+        }
+        const result = await importOpmlFile(text);
         const skipped = result.skippedFeeds > 0 ? ` (${result.skippedFeeds} skipped)` : '';
         host.status = `Imported ${result.subscribedFeeds} new subscriptions${skipped}. Syncing articles.`;
         await syncAllFeeds((done: number, total: number) => {

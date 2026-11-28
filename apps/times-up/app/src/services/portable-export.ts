@@ -7,8 +7,14 @@ export const ARCHIVE_VERSION = 1;
 export interface LibraryArchive {
     version: number;
     exportedAt: string;
-    folders: Array<{ title: string; createdAt: number }>;
-    feeds: Array<{ title: string; url: string; siteUrl?: string | undefined; folders: string[] }>;
+    folders: Array<{ id?: string | undefined; title: string; createdAt: number }>;
+    feeds: Array<{
+        id?: string | undefined;
+        title: string;
+        url: string;
+        siteUrl?: string | undefined;
+        folders: string[];
+    }>;
     savedSearches: Array<{
         title: string;
         query: string;
@@ -31,8 +37,9 @@ export function buildArchive(
     return {
         version: ARCHIVE_VERSION,
         exportedAt: now.toISOString(),
-        folders: folders.map((f) => ({ title: f.title, createdAt: f.createdAt })),
+        folders: folders.map((f) => ({ id: f.id, title: f.title, createdAt: f.createdAt })),
         feeds: feeds.map((f) => ({
+            id: f.id,
             title: f.title,
             url: f.url,
             ...(f.siteUrl ? { siteUrl: f.siteUrl } : {}),
@@ -56,10 +63,10 @@ export function buildArchive(
  */
 export function archiveToText(archive: LibraryArchive): string {
     const lines = [`version\t${archive.version}`, `exportedAt\t${archive.exportedAt}`];
-    for (const f of archive.folders) lines.push(`folder\t${cell(f.title)}\t${f.createdAt}`);
+    for (const f of archive.folders) lines.push(`folder\t${cell(f.id ?? '')}\t${cell(f.title)}\t${f.createdAt}`);
     for (const f of archive.feeds) {
         lines.push(
-            `feed\t${cell(f.title)}\t${cell(f.url)}\t${cell(f.siteUrl ?? '')}\t${f.folders.map(cell).join('|')}`,
+            `feed\t${cell(f.id ?? '')}\t${cell(f.title)}\t${cell(f.url)}\t${cell(f.siteUrl ?? '')}\t${f.folders.map(cell).join('|')}`,
         );
     }
     for (const s of archive.savedSearches) {
@@ -95,13 +102,22 @@ export function textToArchive(text: string): LibraryArchive | null {
     const muteRules: MuteRule[] = [];
     for (const line of lines) {
         const [kind, ...fields] = line.split('\t');
-        if (kind === 'folder') folders.push({ title: uncell(fields[0] ?? ''), createdAt: Number(fields[1] ?? 0) });
+        if (kind === 'folder') {
+            const legacy = fields.length === 2;
+            folders.push({
+                id: legacy ? undefined : uncell(fields[0] ?? '') || undefined,
+                title: uncell(fields[legacy ? 0 : 1] ?? ''),
+                createdAt: Number(fields[legacy ? 1 : 2] ?? 0),
+            });
+        }
         if (kind === 'feed') {
+            const legacy = fields.length === 4;
             feeds.push({
-                title: uncell(fields[0] ?? ''),
-                url: uncell(fields[1] ?? ''),
-                siteUrl: uncell(fields[2] ?? '') || undefined,
-                folders: (fields[3] ?? '').split('|').filter(Boolean).map(uncell),
+                id: legacy ? undefined : uncell(fields[0] ?? '') || undefined,
+                title: uncell(fields[legacy ? 0 : 1] ?? ''),
+                url: uncell(fields[legacy ? 1 : 2] ?? ''),
+                siteUrl: uncell(fields[legacy ? 2 : 3] ?? '') || undefined,
+                folders: (fields[legacy ? 3 : 4] ?? '').split('|').filter(Boolean).map(uncell),
             });
         }
         if (kind === 'search') {
@@ -130,6 +146,27 @@ export function textToArchive(text: string): LibraryArchive | null {
         savedSearches,
         muteRules,
     };
+}
+
+export function parseArchive(text: string): LibraryArchive | null {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    if (!trimmed.startsWith('{')) return textToArchive(trimmed);
+    try {
+        const parsed = JSON.parse(trimmed) as Partial<LibraryArchive> | null;
+        if (
+            !parsed ||
+            parsed.version !== ARCHIVE_VERSION ||
+            !Array.isArray(parsed.folders) ||
+            !Array.isArray(parsed.feeds) ||
+            !Array.isArray(parsed.savedSearches) ||
+            !Array.isArray(parsed.muteRules)
+        )
+            return null;
+        return parsed as LibraryArchive;
+    } catch {
+        return null;
+    }
 }
 
 function uncell(value: string): string {

@@ -50,8 +50,8 @@ assert(JSON.parse(json).feeds[1].siteUrl === 'https://example.com', 'JSON round 
 
 const text = archiveToText(archive);
 assert(text.split('\n').filter(Boolean)[0]?.startsWith('version\t') === true, 'text format is line separated');
-assert(text.includes('folder\tTech\\, News'), 'text escapes commas in a title');
-assert(text.includes('feed\tVerge'), 'text holds one feed per line');
+assert(text.includes('folder\tf2\tTech\\, News'), 'text escapes commas in a title');
+assert(text.includes('feed\tfeed2\tVerge'), 'text holds one feed per line');
 const parsed = textToArchive(text);
 assert(parsed !== null, 'text archive parses');
 assert(parsed?.folders[1]?.title === 'Tech, News', 'escaped commas survive text round trip');
