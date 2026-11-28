@@ -1,6 +1,8 @@
 import { noteOriginal, noteShare } from '../../mutations';
 import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../../services/share';
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
+import { loadFeedReaderMode } from '../../services/reader-mode';
+import { isSnapshotArticle } from '../../services/saved-queue';
 import { anchorFromEvent, type MenuAnchor } from '../menu-popover';
 import type { Article } from '../../types';
 import {
@@ -34,6 +36,7 @@ export interface ArticleViewToolbarHost {
     nativeShare(a: Article, link: string): Promise<void>;
     onManageFolders(anchor: MenuAnchor): void;
     toggleFind(): void;
+    onReaderModeForFeed(): void;
     paint(): void;
 }
 
@@ -155,6 +158,19 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
             host.paint();
         });
         menu.appendChild(listen);
+        if (!isSnapshotArticle(a)) {
+            const readerMode = el(
+                'button',
+                'btn',
+                loadFeedReaderMode(a.feedId) ? 'Clear reader mode for this feed' : 'Use reader mode for this feed',
+            );
+            readerMode.addEventListener('click', () => {
+                host.onReaderModeForFeed();
+                host.overflowOpen = false;
+                host.paint();
+            });
+            menu.appendChild(readerMode);
+        }
         group.appendChild(menu);
     }
     return [group];

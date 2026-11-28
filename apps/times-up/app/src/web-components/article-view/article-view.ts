@@ -13,6 +13,14 @@ import { isDeranked } from '../../services/interesting-settings';
 import { isSnapshotArticle } from '../../services/saved-queue';
 import type { ArticleKeyword } from '../../services/keywords';
 import { areHighlightsEnabled } from '../../services/highlights';
+import {
+    applyReaderMode,
+    clearFeedReaderMode,
+    loadFeedReaderMode,
+    loadReaderMode,
+    readerModeForFeed,
+    saveFeedReaderMode,
+} from '../../services/reader-mode';
 import { fetchArticleProvenance, type ArticleProvenance } from '../../services/api-provenance';
 import { fetchArticleCluster, type ArticleCluster } from '../../services/api-clusters';
 import { provenanceToMarkdown } from '../../services/provenance-export';
@@ -203,6 +211,25 @@ export class ArticleView extends HTMLElement {
         this.paint();
     };
 
+    private applyFeedReaderMode(): void {
+        const feedId = this.article?.feedId;
+        applyReaderMode(feedId ? readerModeForFeed(feedId) : loadReaderMode());
+    }
+
+    onReaderModeForFeed = (): void => {
+        const article = this.article;
+        if (!article || isSnapshotArticle(article)) return;
+        if (loadFeedReaderMode(article.feedId)) {
+            clearFeedReaderMode(article.feedId);
+            applyReaderMode(loadReaderMode());
+            toastInfo('Feed reader mode cleared');
+        } else {
+            saveFeedReaderMode(article.feedId, loadReaderMode());
+            toastInfo('Reader mode saved for this feed');
+        }
+        this.paint();
+    };
+
     /** Bookkeeping formerly in updated(), run when the article identity changes. */
     private onArticleChanged(): void {
         // A star/read toggle hands the element a new object built from the list
@@ -248,6 +275,7 @@ export class ArticleView extends HTMLElement {
                 void this.refreshSavedState();
             }
         }
+        this.applyFeedReaderMode();
     }
 
     private async refreshProvenance(): Promise<void> {

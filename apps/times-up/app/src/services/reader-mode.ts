@@ -1,3 +1,5 @@
+import { safeLocalStorage } from './local-storage';
+
 export type ReaderFont = 'sans' | 'serif' | 'dyslexia';
 export type ReaderSize = 'small' | 'medium' | 'large';
 export type ReaderLine = 'compact' | 'normal' | 'relaxed';
@@ -11,6 +13,8 @@ export interface ReaderMode {
 }
 
 const KEY = 'times-up:reader-mode';
+const FEED_PREFIX = 'times-up:reader-mode:feed:';
+const DEFAULT: ReaderMode = { font: 'sans', size: 'medium', line: 'normal', width: 'medium' };
 
 const FONTS: Record<ReaderFont, string> = {
     sans: 'var(--font-family)',
@@ -22,28 +26,73 @@ const SIZES: Record<ReaderSize, string> = { small: '14px', medium: '16px', large
 const LINES: Record<ReaderLine, string> = { compact: '1.4', normal: '1.7', relaxed: '2.0' };
 const WIDTHS: Record<ReaderWidth, string> = { narrow: '600px', medium: '760px', wide: '920px' };
 
-export function loadReaderMode(): ReaderMode {
+function parseMode(raw: string | null): ReaderMode {
+    if (!raw) return { ...DEFAULT };
     try {
-        const raw = localStorage.getItem(KEY);
-        if (!raw) return { font: 'sans', size: 'medium', line: 'normal', width: 'medium' };
         const p = JSON.parse(raw) as Partial<ReaderMode>;
         return {
-            font: (p.font as ReaderFont) ?? 'sans',
-            size: (p.size as ReaderSize) ?? 'medium',
-            line: (p.line as ReaderLine) ?? 'normal',
-            width: (p.width as ReaderWidth) ?? 'medium',
+            font: p.font === 'serif' || p.font === 'dyslexia' ? p.font : 'sans',
+            size: p.size === 'small' || p.size === 'large' ? p.size : 'medium',
+            line: p.line === 'compact' || p.line === 'relaxed' ? p.line : 'normal',
+            width: p.width === 'narrow' || p.width === 'wide' ? p.width : 'medium',
         };
     } catch {
-        return { font: 'sans', size: 'medium', line: 'normal', width: 'medium' };
+        return { ...DEFAULT };
     }
 }
 
-export function saveReaderMode(mode: ReaderMode): void {
+function read(key: string, storage?: Storage | null): ReaderMode {
+    const store = storage === undefined ? safeLocalStorage() : storage;
     try {
-        localStorage.setItem(KEY, JSON.stringify(mode));
+        return parseMode(store?.getItem(key) ?? null);
     } catch {
-        // ignore
+        return { ...DEFAULT };
     }
+}
+
+function write(key: string, mode: ReaderMode, storage?: Storage | null): void {
+    const store = storage === undefined ? safeLocalStorage() : storage;
+    try {
+        store?.setItem(key, JSON.stringify(mode));
+    } catch {
+        // The live page still uses the selected mode.
+    }
+}
+
+export function loadReaderMode(storage?: Storage | null): ReaderMode {
+    return read(KEY, storage);
+}
+
+export function saveReaderMode(mode: ReaderMode, storage?: Storage | null): void {
+    write(KEY, mode, storage);
+}
+
+export function loadFeedReaderMode(feedId: string, storage?: Storage | null): ReaderMode | null {
+    const store = storage === undefined ? safeLocalStorage() : storage;
+    const key = `${FEED_PREFIX}${feedId}`;
+    try {
+        const raw = store?.getItem(key);
+        return raw ? parseMode(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function saveFeedReaderMode(feedId: string, mode: ReaderMode, storage?: Storage | null): void {
+    write(`${FEED_PREFIX}${feedId}`, mode, storage);
+}
+
+export function clearFeedReaderMode(feedId: string, storage?: Storage | null): void {
+    const store = storage === undefined ? safeLocalStorage() : storage;
+    try {
+        store?.removeItem(`${FEED_PREFIX}${feedId}`);
+    } catch {
+        // Nothing to clear when the store is blocked.
+    }
+}
+
+export function readerModeForFeed(feedId: string, storage?: Storage | null): ReaderMode {
+    return loadFeedReaderMode(feedId, storage) ?? loadReaderMode(storage);
 }
 
 export function readerModeVars(mode: ReaderMode): Record<string, string> {
