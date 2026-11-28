@@ -60,6 +60,18 @@ async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | 
     }
 }
 
+/** Actions declared on every notification the worker shows. The worker handles
+ *  them in `notificationclick`; a browser without action support ignores them. */
+const NOTIFICATION_ACTIONS: { action: string; title: string }[] = [
+    { action: 'open', title: 'Open' },
+    { action: 'dismiss', title: 'Dismiss' },
+];
+
+/** `actions` is in the Notifications spec but absent from this DOM lib's type. */
+interface NotificationWithOptions extends NotificationOptions {
+    actions?: { action: string; title: string }[];
+}
+
 /**
  * Show one notification through the service worker when one is registered, and
  * through the page constructor otherwise. Returns false when the browser has
@@ -71,7 +83,11 @@ export async function showNotification(title: string, options: NotificationOptio
     const registration = await serviceWorkerRegistration();
     if (registration) {
         try {
-            await registration.showNotification(title, options);
+            const opts: NotificationWithOptions = {
+                ...options,
+                actions: (options as NotificationWithOptions).actions ?? NOTIFICATION_ACTIONS,
+            };
+            await registration.showNotification(title, opts as NotificationOptions);
             return true;
         } catch {
             // Fall through to the page constructor.

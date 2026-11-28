@@ -103,6 +103,10 @@ function notificationRoute(route) {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    // A dismiss action (or a platform that reports no action) closes without
+    // navigating; an open action or a body click opens the rows.
+    const action = event.action || 'open';
+    if (action === 'dismiss') return;
     const route = notificationRoute(event.notification.data && event.notification.data.route);
     const target = new URL(self.registration.scope);
     if (route) target.hash = `#${route}`;
