@@ -50,6 +50,11 @@ import { assert } from './smoke-assert';
     );
 
     assert(
+        searchSettings('quiet hours').some((entry) => entry.id === 'notification-permission'),
+        '"quiet hours" finds the shared quiet-hours control',
+    );
+
+    assert(
         searchSettings('forget').some((entry) => entry.id === 'forget-profile'),
         '"forget" finds the forget control',
     );

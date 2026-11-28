@@ -119,7 +119,7 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
         id: 'notification-permission',
         section: 'general',
         label: 'Notifications',
-        keywords: 'notifications alerts briefings permission allow browser test',
+        keywords: 'notifications alerts briefings permission allow browser test quiet hours',
         target: '[data-setting="notifications"]',
     },
     {

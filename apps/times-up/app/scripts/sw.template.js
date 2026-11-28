@@ -89,3 +89,38 @@ self.addEventListener('fetch', (event) => {
         }),
     );
 });
+
+// Notification clicks (S3/S5). The page sends a route it already parses; the
+// worker keeps its own allow-list so notification data can never become an
+// arbitrary navigation target. Routes are hash paths, matching the app router.
+const NOTIFICATION_ROUTES = ['/alerts', '/brief', '/today'];
+
+function notificationRoute(route) {
+    if (typeof route !== 'string') return null;
+    const path = route.split('?')[0];
+    return NOTIFICATION_ROUTES.includes(path) ? path : null;
+}
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const route = notificationRoute(event.notification.data && event.notification.data.route);
+    const target = new URL(self.registration.scope);
+    if (route) target.hash = `#${route}`;
+    event.waitUntil(
+        (async () => {
+            try {
+                const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+                for (const client of windows) {
+                    if (client.url.startsWith(self.registration.scope)) {
+                        await client.focus();
+                        await client.navigate(target.href);
+                        return;
+                    }
+                }
+            } catch {
+                // Fall through to opening a window.
+            }
+            await self.clients.openWindow(target.href);
+        })(),
+    );
+});

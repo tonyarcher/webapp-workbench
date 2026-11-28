@@ -5,6 +5,11 @@ import { clearToasts, type ToastNotice } from '../../services/toast';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
 import { startAppBadge, stopAppBadge, clearAppBadge } from '../../services/app-badge';
+import {
+    startAlertNotifications,
+    stopAlertNotifications,
+    clearAlertSnapshot,
+} from '../../services/alert-notifications';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
 import { forgetLearning } from '../../services/interesting-settings';
 
@@ -49,10 +54,12 @@ export function onAuthChanged(host: AppShellAuthHost): void {
     if (host.authed) {
         startInterestingCountsRefresh();
         startAppBadge();
+        startAlertNotifications();
         startForegroundSync(host.autoSyncFeedIds);
     } else {
         stopInterestingCountsRefresh();
         stopAppBadge();
+        stopAlertNotifications();
         stopForegroundSync();
     }
 }
@@ -71,6 +78,8 @@ export function signIn(host: AppShellAuthHost): void {
 export function signOut(host: AppShellAuthHost): void {
     stopInterestingCountsRefresh();
     stopAppBadge();
+    stopAlertNotifications();
+    clearAlertSnapshot();
     void clearAppBadge();
     stopForegroundSync();
     void resetAccount(host).catch(() => {

@@ -74,6 +74,19 @@ export function checkboxField(label: string, checked: boolean, onChange: (checke
     return field;
 }
 
+/** A labelled `<input type="time">`; the browser owns the 24-hour parsing. */
+export function timeField(label: string, value: string, onChange: (value: string) => void): HTMLLabelElement {
+    const field = el('label', 'view-field');
+    field.append(el('span', undefined, label));
+    const input = el('input');
+    input.type = 'time';
+    input.value = value;
+    setFocusKey(input, `time:${label}`);
+    input.addEventListener('change', () => onChange(input.value));
+    field.append(input);
+    return field;
+}
+
 /** A `.section` with its heading. Callers append that section's own rows. */
 export function section(title: string): HTMLElement {
     const root = el('div', 'section');

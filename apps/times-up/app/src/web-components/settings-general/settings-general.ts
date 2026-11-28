@@ -17,6 +17,7 @@ import {
     buildUsageSection,
 } from './settings-general-sections';
 import { buildNotificationsSection } from './settings-general-notifications';
+import { loadQuietHours, saveQuietHours, type QuietHours } from '../../services/quiet-hours';
 import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
 import type { ShareTarget } from '../../services/share';
 import { chooseStrategy, followPage, previewPage, toggleCandidate } from './settings-general-scrape';
@@ -90,6 +91,7 @@ export class SettingsGeneral extends HTMLElement {
     declare notificationState: NotificationState;
     declare notificationStatus: string;
     declare notificationStatusError: boolean;
+    declare quietHours: QuietHours;
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -132,6 +134,7 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'notificationState', 'unsupported' as NotificationState);
         defineReactive(this, 'notificationStatus', '');
         defineReactive(this, 'notificationStatusError', false);
+        defineReactive(this, 'quietHours', loadQuietHours());
         this.resetState();
     }
 
@@ -267,6 +270,7 @@ export class SettingsGeneral extends HTMLElement {
         this.notificationState = readNotificationState();
         this.notificationStatus = '';
         this.notificationStatusError = false;
+        this.quietHours = loadQuietHours();
     }
 
     setReaderMode = (mode: ReaderMode): void => {
@@ -331,6 +335,12 @@ export class SettingsGeneral extends HTMLElement {
                 ? "Still blocked. Allow notifications in this browser's site settings."
                 : '';
         this.notificationStatusError = this.notificationState === 'denied';
+    };
+
+    /** The shared preference F1 alerts and K4 briefings read before notifying. */
+    setQuietHours = (next: QuietHours): void => {
+        this.quietHours = next;
+        saveQuietHours(next);
     };
 
     openScrape = (): void => {

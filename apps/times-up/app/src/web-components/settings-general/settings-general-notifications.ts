@@ -1,14 +1,17 @@
 import type { NotificationState } from '../../services/notifications';
-import { button, el, hint, section, setFocusKey, statusLine } from './settings-general-dom';
+import { formatMinute, parseTimeValue, type QuietHours } from '../../services/quiet-hours';
+import { button, checkboxField, el, hint, section, setFocusKey, statusLine, timeField } from './settings-general-dom';
 
 /** What the notifications section needs from the panel element. */
 export interface SettingsGeneralNotificationsHost {
     notificationState: NotificationState;
     notificationStatus: string;
     notificationStatusError: boolean;
+    quietHours: QuietHours;
     requestNotifications: () => void;
     sendTest: () => void;
     refreshNotificationState: () => void;
+    setQuietHours: (next: QuietHours) => void;
 }
 
 /**
@@ -38,6 +41,32 @@ function actionFor(host: SettingsGeneralNotificationsHost): HTMLButtonElement | 
     }
 }
 
+/**
+ * The quiet-hours window is shared with F1 alerts and K4 briefings, so it sits
+ * here rather than in each channel. Times are local to this device.
+ */
+function buildQuietHours(host: SettingsGeneralNotificationsHost): HTMLElement {
+    const prefs = host.quietHours;
+    const root = el('div', 'quiet-hours');
+    root.append(checkboxField('Quiet hours', prefs.enabled, (enabled) => host.setQuietHours({ ...prefs, enabled })));
+    if (prefs.enabled) {
+        const times = el('div', 'view-defaults');
+        times.append(
+            timeField('From', formatMinute(prefs.startMinute), (value) => {
+                const minute = parseTimeValue(value);
+                if (minute !== null) host.setQuietHours({ ...prefs, startMinute: minute });
+            }),
+            timeField('To', formatMinute(prefs.endMinute), (value) => {
+                const minute = parseTimeValue(value);
+                if (minute !== null) host.setQuietHours({ ...prefs, endMinute: minute });
+            }),
+        );
+        root.append(times);
+    }
+    root.append(hint("Quiet hours use this device's local time. Alerts and briefings wait until the window ends."));
+    return root;
+}
+
 export function buildNotificationsSection(host: SettingsGeneralNotificationsHost): HTMLElement {
     const root = section('Notifications');
     root.setAttribute('data-setting', 'notifications');
@@ -58,6 +87,7 @@ export function buildNotificationsSection(host: SettingsGeneralNotificationsHost
             ),
         );
     }
+    root.append(buildQuietHours(host));
     if (host.notificationStatus) root.append(statusLine(host.notificationStatus, host.notificationStatusError));
     return root;
 }

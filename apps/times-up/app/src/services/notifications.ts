@@ -61,17 +61,13 @@ async function serviceWorkerRegistration(): Promise<ServiceWorkerRegistration | 
 }
 
 /**
- * Show one generic test notification. Returns false when the browser has not
- * granted permission or refused to display it; callers report that plainly.
+ * Show one notification through the service worker when one is registered, and
+ * through the page constructor otherwise. Returns false when the browser has
+ * not granted permission or refused to display it.
  */
-export async function showTestNotification(): Promise<boolean> {
+export async function showNotification(title: string, options: NotificationOptions): Promise<boolean> {
     const api = notificationApi();
     if (!api || api.permission !== 'granted') return false;
-    const title = 'Times Up';
-    const options: NotificationOptions = {
-        body: 'Test notification. Notifications are working.',
-        tag: 'times-up-test',
-    };
     const registration = await serviceWorkerRegistration();
     if (registration) {
         try {
@@ -87,4 +83,14 @@ export async function showTestNotification(): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+/**
+ * Show one generic test notification. The panel reports a refusal plainly.
+ */
+export async function showTestNotification(): Promise<boolean> {
+    return showNotification('Times Up', {
+        body: 'Test notification. Notifications are working.',
+        tag: 'times-up-test',
+    });
 }
