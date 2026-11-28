@@ -8,6 +8,7 @@ import { folderFeedsOf, virtualizerOptionsFor } from './article-list-helpers';
 import { fetchLibrary, libraryKey, queryClient } from '../../query';
 import { clearSelectionAction } from './article-list-selection';
 import { partitionPriorityArticles } from '../../services/priority-inbox';
+import { activeSnoozedIds, loadSnoozed } from '../../services/snooze';
 
 /** Everything the list loader reads and writes on the component. */
 export interface LoadingHost {
@@ -97,6 +98,8 @@ export function reinitVirtualizer(host: LoadingHost): void {
 export async function runLoad(host: LoadingHost, gen: number): Promise<void> {
     try {
         await loadPageSource(host, gen);
+        const snoozed = activeSnoozedIds(loadSnoozed());
+        host.items = host.items.filter((article) => !snoozed.has(article.id));
         applyPriorityFilter(host);
         if (host.deepLinkArticle) host.items = insertArticleForReveal(host.items, host.deepLinkArticle, host.sort);
         applyResumeAction(host as never);

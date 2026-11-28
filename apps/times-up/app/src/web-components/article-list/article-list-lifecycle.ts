@@ -30,6 +30,7 @@ const WINDOW_LISTENERS = [
     ['article-starred', 'onArticleStarred'],
     ['saved-articles-changed', 'onSavedArticlesChanged'],
     ['mute-rules-changed', 'onMuteRulesChanged'],
+    ['snooze-changed', 'onMuteRulesChanged'],
     ['view-settings-changed', 'onViewSettingsChanged'],
     ['storage', 'onStorage'],
     ['highlights-enabled-changed', 'onHighlightsEnabledChanged'],

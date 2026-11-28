@@ -523,6 +523,13 @@ h1 a:hover {
     text-align: left;
     white-space: nowrap;
 }
+.overflow-label {
+    padding: 4px 8px 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
 .toolbar-group {
     position: relative;
 }

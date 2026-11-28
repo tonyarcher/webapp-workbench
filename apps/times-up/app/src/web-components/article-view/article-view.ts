@@ -22,6 +22,7 @@ import type { Article, Board, RowHighlight } from '../../types';
 import { stripTags } from '../../util';
 import { articleKeywords, copyText } from './article-view-helpers';
 import { recordUsage } from '../../services/usage';
+import { snoozeArticle, snoozeUntil, type SnoozeWindow } from '../../services/snooze';
 import { VideoHeader } from '../video-header/video-header';
 import { renderBoardPicker, renderSpeedReadOverlay } from './article-view-overlays';
 import { FeedFoldersMenu } from '../feed-folders-menu/feed-folders-menu';
@@ -211,6 +212,14 @@ export class ArticleView extends HTMLElement {
     private openClusterMember(id: string): void {
         this.dispatchEvent(new CustomEvent('open-cluster-member', { detail: { id }, bubbles: true, composed: true }));
     }
+
+    onSnooze = (when: SnoozeWindow): void => {
+        const article = this.article;
+        if (!article) return;
+        snoozeArticle(article, snoozeUntil(when));
+        window.dispatchEvent(new CustomEvent('snooze-changed'));
+        this.emitClose();
+    };
 
     onReaderModeForFeed = (): void => {
         toggleArticleReaderMode(this.article);

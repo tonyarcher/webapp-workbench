@@ -12,7 +12,7 @@ import { toastApiError } from '../../services/toast';
 import { safeHttpUrl } from '../../services/parser';
 import { isModalOpen } from '../../services/modal-guard';
 import type { Article } from '../../types';
-import { loadNextPageAction } from './article-list-loading';
+import { canLoadMore, loadNextPageAction } from './article-list-loading';
 
 export interface SlideshowHost {
     items: Article[];
@@ -74,7 +74,7 @@ export function slideshowPrev(host: SlideshowHost): void {
 }
 
 export function maybeLoadMoreForSlideshow(host: SlideshowHost): void {
-    if (host.loading) return;
+    if (host.loading || !canLoadMore(host as never)) return;
     if (host.slideshowIndex >= host.items.length - 2) {
         void loadNextPageAction(host as never);
     }

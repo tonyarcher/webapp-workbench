@@ -3,6 +3,7 @@ import { canNativeShare, mailtoShareUrl, shareUrl, type ShareTarget } from '../.
 import { loadMastodonHost, loadShareTargets } from '../../services/share-settings';
 import { loadFeedReaderMode } from '../../services/reader-mode';
 import { isSnapshotArticle } from '../../services/saved-queue';
+import type { SnoozeWindow } from '../../services/snooze';
 import { anchorFromEvent, type MenuAnchor } from '../menu-popover';
 import type { Article } from '../../types';
 import {
@@ -37,6 +38,7 @@ export interface ArticleViewToolbarHost {
     onManageFolders(anchor: MenuAnchor): void;
     toggleFind(): void;
     onReaderModeForFeed(): void;
+    onSnooze(when: SnoozeWindow): void;
     paint(): void;
 }
 
@@ -158,6 +160,21 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
             host.paint();
         });
         menu.appendChild(listen);
+        const snoozeLabel = el('div', 'overflow-label', 'Snooze');
+        menu.appendChild(snoozeLabel);
+        for (const [when, label] of [
+            ['tonight', 'Until tonight'],
+            ['tomorrow', 'Until tomorrow'],
+            ['weekend', 'Until the weekend'],
+        ] as Array<[SnoozeWindow, string]>) {
+            const snooze = el('button', 'btn', label);
+            snooze.addEventListener('click', () => {
+                host.onSnooze(when);
+                host.overflowOpen = false;
+                host.paint();
+            });
+            menu.appendChild(snooze);
+        }
         if (!isSnapshotArticle(a)) {
             const readerMode = el(
                 'button',
