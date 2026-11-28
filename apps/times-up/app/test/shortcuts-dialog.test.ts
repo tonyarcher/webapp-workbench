@@ -19,7 +19,10 @@ describe('help dialog', () => {
         const root = dialog.shadowRoot;
         const headings = [...(root?.querySelectorAll('h3') ?? [])].map((h) => h.textContent);
         expect(headings).to.include('Views');
+        expect(headings).to.include('Browser surfaces');
         expect(headings).to.include('Article list');
+        expect(root?.textContent).to.include('Alerts arrive only while Times Up is open');
+        expect(root?.textContent).to.include('Closed tabs may not refresh');
         expect(headings).to.include('Open article');
         expect(root?.querySelector('kbd')?.textContent).to.equal('All');
         expect(root?.querySelectorAll('.row').length).to.be.greaterThan(LIST_SHORTCUTS_HELP.length);

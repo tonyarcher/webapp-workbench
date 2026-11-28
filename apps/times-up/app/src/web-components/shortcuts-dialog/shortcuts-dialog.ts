@@ -11,6 +11,25 @@ const VIEWS: ShortcutHelp[] = [
     { keys: 'Organize', action: 'Folders, feeds, import and three export formats.' },
 ];
 
+const BROWSER_SURFACES: ShortcutHelp[] = [
+    {
+        keys: 'Install',
+        action: 'Needs browser install support. Installed apps launch in a standalone window and work offline.',
+    },
+    {
+        keys: 'Notifications',
+        action: 'Need browser permission and OS support. Alerts arrive only while Times Up is open; quiet hours are local to this device.',
+    },
+    {
+        keys: 'App icon',
+        action: 'Uses the browser badge when supported, otherwise a count drawn over the favicon. Turn it off in Browser surfaces.',
+    },
+    {
+        keys: 'Background refresh',
+        action: 'Depends on browser Sync APIs. Closed tabs may not refresh; the open tab keeps its foreground sync loop.',
+    },
+];
+
 export class ShortcutsDialog extends HTMLElement {
     private _open = false;
     private root: HTMLDivElement | null = null;
@@ -93,6 +112,7 @@ export class ShortcutsDialog extends HTMLElement {
         h.textContent = 'Help & shortcuts';
         this.root.appendChild(h);
         this.root.appendChild(this.rows('Views', VIEWS));
+        this.root.appendChild(this.rows('Browser surfaces', BROWSER_SURFACES));
         this.root.appendChild(this.rows('Article list', LIST_SHORTCUTS_HELP));
         this.root.appendChild(this.rows('Open article', OVERLAY_SHORTCUTS_HELP));
         const foot = document.createElement('div');
