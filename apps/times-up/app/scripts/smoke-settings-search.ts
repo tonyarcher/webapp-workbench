@@ -55,6 +55,16 @@ import { assert } from './smoke-assert';
     );
 
     assert(
+        searchSettings('install').some((entry) => entry.id === 'notification-permission'),
+        '"install" finds the browser surface controls',
+    );
+
+    assert(
+        searchSettings('badge').some((entry) => entry.id === 'notification-permission'),
+        '"badge" finds the app-icon control',
+    );
+
+    assert(
         searchSettings('forget').some((entry) => entry.id === 'forget-profile'),
         '"forget" finds the forget control',
     );

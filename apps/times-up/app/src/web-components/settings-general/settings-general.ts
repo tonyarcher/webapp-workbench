@@ -18,6 +18,8 @@ import {
 } from './settings-general-sections';
 import { buildNotificationsSection } from './settings-general-notifications';
 import { loadQuietHours, saveQuietHours, type QuietHours } from '../../services/quiet-hours';
+import { badgeEnabled, refreshAppBadge, saveBadgeEnabled } from '../../services/app-badge';
+import { promptInstall } from '../../services/pwa-install';
 import type { DiscoveredFeed, ScrapeCandidate, ScrapePreview } from '../../services/api';
 import type { ShareTarget } from '../../services/share';
 import { chooseStrategy, followPage, previewPage, toggleCandidate } from './settings-general-scrape';
@@ -92,6 +94,7 @@ export class SettingsGeneral extends HTMLElement {
     declare notificationStatus: string;
     declare notificationStatusError: boolean;
     declare quietHours: QuietHours;
+    declare badgeEnabled: boolean;
 
     private bodyEl: HTMLDivElement | null = null;
     private updateScheduled = false;
@@ -135,6 +138,7 @@ export class SettingsGeneral extends HTMLElement {
         defineReactive(this, 'notificationStatus', '');
         defineReactive(this, 'notificationStatusError', false);
         defineReactive(this, 'quietHours', loadQuietHours());
+        defineReactive(this, 'badgeEnabled', badgeEnabled());
         this.resetState();
     }
 
@@ -271,6 +275,7 @@ export class SettingsGeneral extends HTMLElement {
         this.notificationStatus = '';
         this.notificationStatusError = false;
         this.quietHours = loadQuietHours();
+        this.badgeEnabled = badgeEnabled();
     }
 
     setReaderMode = (mode: ReaderMode): void => {
@@ -341,6 +346,29 @@ export class SettingsGeneral extends HTMLElement {
     setQuietHours = (next: QuietHours): void => {
         this.quietHours = next;
         saveQuietHours(next);
+    };
+
+    setBadgeEnabled = (enabled: boolean): void => {
+        this.badgeEnabled = enabled;
+        saveBadgeEnabled(enabled);
+        refreshAppBadge();
+    };
+
+    installApp = (): void => {
+        void promptInstall()
+            .then((result) => {
+                this.notificationStatus =
+                    result === 'accepted'
+                        ? 'Times Up installed.'
+                        : result === 'dismissed'
+                          ? 'Install dismissed. You can install later from your browser menu.'
+                          : 'Install is unavailable in this browser.';
+                this.notificationStatusError = false;
+            })
+            .catch(() => {
+                this.notificationStatus = 'Install could not start.';
+                this.notificationStatusError = true;
+            });
     };
 
     openScrape = (): void => {

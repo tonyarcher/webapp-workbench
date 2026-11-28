@@ -1,4 +1,38 @@
 import { libraryKey, queryClient } from '../query';
+import { safeLocalStorage } from './local-storage';
+
+const BADGE_ENABLED_KEY = 'times-up:badge-enabled';
+/** The live setting wins when storage is blocked, so the badge matches the panel. */
+let runtimeEnabled: boolean | null = null;
+
+export function badgeEnabled(storage?: Storage | null): boolean {
+    if (storage !== undefined) {
+        if (!storage) return true;
+        try {
+            return storage.getItem(BADGE_ENABLED_KEY) !== 'false';
+        } catch {
+            return true;
+        }
+    }
+    if (runtimeEnabled !== null) return runtimeEnabled;
+    const store = safeLocalStorage();
+    try {
+        runtimeEnabled = store?.getItem(BADGE_ENABLED_KEY) !== 'false';
+    } catch {
+        runtimeEnabled = true;
+    }
+    return runtimeEnabled;
+}
+
+export function saveBadgeEnabled(enabled: boolean, storage?: Storage | null): void {
+    if (storage === undefined) runtimeEnabled = enabled;
+    const store = storage === undefined ? safeLocalStorage() : storage;
+    try {
+        store?.setItem(BADGE_ENABLED_KEY, String(enabled));
+    } catch {
+        // The runtime value still keeps the badge in sync for this page.
+    }
+}
 
 export const APP_BADGE_CAP = 99;
 
@@ -94,19 +128,20 @@ function drawFaviconBadge(total: number): void {
 }
 
 export async function applyAppBadge(total: number): Promise<void> {
+    const count = badgeEnabled() ? total : 0;
     const n = nav();
     if (!n) return;
     try {
-        if (total <= 0) {
+        if (count <= 0) {
             if (n.clearAppBadge) await n.clearAppBadge();
             else if (n.setAppBadge) await n.setAppBadge(0);
         } else if (n.setAppBadge) {
-            await n.setAppBadge(badgeValue(total));
+            await n.setAppBadge(badgeValue(count));
         }
     } catch {
         // Some browsers reject when the page is not installed; ignore.
     }
-    if (!supportsBadgeApi()) drawFaviconBadge(total);
+    if (!supportsBadgeApi()) drawFaviconBadge(count);
 }
 
 let started = false;

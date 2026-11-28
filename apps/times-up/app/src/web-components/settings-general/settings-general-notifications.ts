@@ -1,4 +1,5 @@
 import type { NotificationState } from '../../services/notifications';
+import { installAvailable, isInstalled } from '../../services/pwa-install';
 import { formatMinute, parseTimeValue, type QuietHours } from '../../services/quiet-hours';
 import { button, checkboxField, el, hint, section, setFocusKey, statusLine, timeField } from './settings-general-dom';
 
@@ -8,10 +9,13 @@ export interface SettingsGeneralNotificationsHost {
     notificationStatus: string;
     notificationStatusError: boolean;
     quietHours: QuietHours;
+    badgeEnabled: boolean;
     requestNotifications: () => void;
     sendTest: () => void;
     refreshNotificationState: () => void;
     setQuietHours: (next: QuietHours) => void;
+    setBadgeEnabled: (enabled: boolean) => void;
+    installApp: () => void;
 }
 
 /**
@@ -67,8 +71,30 @@ function buildQuietHours(host: SettingsGeneralNotificationsHost): HTMLElement {
     return root;
 }
 
+/** Install state and the count-only app-icon badge. */
+function buildBrowserSurfaces(host: SettingsGeneralNotificationsHost): HTMLElement {
+    const root = el('div', 'browser-surfaces');
+    root.append(
+        checkboxField('Show unread count on the app icon', host.badgeEnabled, (enabled) =>
+            host.setBadgeEnabled(enabled),
+        ),
+        hint('Count only. Turn this off to clear the badge; it does not change browser notification permission.'),
+    );
+    const installed = isInstalled();
+    if (installed) {
+        root.append(hint('Times Up is installed as an app. Remove it from your browser or device app settings.'));
+    } else if (installAvailable()) {
+        const install = button('btn', 'Install Times Up', host.installApp);
+        setFocusKey(install, 'button:install');
+        root.append(install, hint('Install for a standalone window and offline launch. No store or account required.'));
+    } else {
+        root.append(hint('Install from your browser menu when available. Installed apps launch offline.'));
+    }
+    return root;
+}
+
 export function buildNotificationsSection(host: SettingsGeneralNotificationsHost): HTMLElement {
-    const root = section('Notifications');
+    const root = section('Browser surfaces');
     root.setAttribute('data-setting', 'notifications');
     const action = actionFor(host);
     if (action) {
@@ -88,6 +114,7 @@ export function buildNotificationsSection(host: SettingsGeneralNotificationsHost
         );
     }
     root.append(buildQuietHours(host));
+    root.append(buildBrowserSurfaces(host));
     if (host.notificationStatus) root.append(statusLine(host.notificationStatus, host.notificationStatusError));
     return root;
 }
