@@ -34,6 +34,7 @@ import styles from './article-view.css?inline';
 import { el, appendAll } from './article-view-dom';
 import { buildToolbar as buildToolbarNodes } from './article-view-toolbar';
 import { ArticleFind } from './article-view-find';
+import { ArticleFocus } from './article-view-focus';
 import {
     buildTitle as buildTitleNodes,
     buildMeta as buildMetaNodes,
@@ -132,6 +133,7 @@ export class ArticleView extends HTMLElement {
     private feedFoldersMenu: FeedFoldersMenu | null = null;
     private similarView: SimilarView | null = null;
     private readonly find = new ArticleFind(this, () => this.paint());
+    readonly focusMode = new ArticleFocus(this);
 
     /** paint() is synchronous, so consumers can await a resolved promise. */
     get updateComplete(): Promise<void> {
@@ -174,6 +176,7 @@ export class ArticleView extends HTMLElement {
         this.removeEventListener('scroll', this.onScroll);
         this.removeEventListener('keydown', this.onFindKey);
         this.find.close(false);
+        this.focusMode.reset();
         if (this.progressSaveTimer !== null) window.clearTimeout(this.progressSaveTimer);
     }
 
@@ -240,6 +243,7 @@ export class ArticleView extends HTMLElement {
         this.keywords = this.article ? articleKeywords(this.article) : [];
         if (this.article?.id !== this.progressArticleId) {
             this.find.close(false);
+            this.focusMode.reset();
             this.similarOpen = false;
             flushProgressOnSwitch(this);
             this.progressArticleId = this.article?.id ?? null;

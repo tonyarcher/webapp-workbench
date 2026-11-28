@@ -462,6 +462,21 @@ h1 a:hover {
     word-break: break-word;
 }
 
+:host(.focus-mode) .content > * {
+    opacity: 0.3;
+    transition: opacity 120ms ease;
+}
+
+:host(.focus-mode) .content > .focus-active {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :host(.focus-mode) .content > * {
+        transition: none;
+    }
+}
+
 .content :is(h1, h2, h3) {
     line-height: 1.3;
 }

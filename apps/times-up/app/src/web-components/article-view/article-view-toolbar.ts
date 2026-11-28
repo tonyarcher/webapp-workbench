@@ -4,6 +4,7 @@ import { loadMastodonHost, loadShareTargets } from '../../services/share-setting
 import { loadFeedReaderMode } from '../../services/reader-mode';
 import { isSnapshotArticle } from '../../services/saved-queue';
 import type { SnoozeWindow } from '../../services/snooze';
+import type { ArticleFocus } from './article-view-focus';
 import { anchorFromEvent, type MenuAnchor } from '../menu-popover';
 import type { Article } from '../../types';
 import {
@@ -39,6 +40,7 @@ export interface ArticleViewToolbarHost {
     toggleFind(): void;
     onReaderModeForFeed(): void;
     onSnooze(when: SnoozeWindow): void;
+    focusMode: ArticleFocus;
     paint(): void;
 }
 
@@ -143,6 +145,14 @@ export function buildStateButtons(host: ArticleViewToolbarHost, a: Article): Nod
             host.paint();
         });
         menu.appendChild(speed);
+        const focus = el('button', 'btn', host.focusMode.enabled ? 'Disable focus mode' : 'Enable focus mode');
+        focus.setAttribute('aria-pressed', String(host.focusMode.enabled));
+        focus.addEventListener('click', () => {
+            host.focusMode.toggle();
+            host.overflowOpen = false;
+            host.paint();
+        });
+        menu.appendChild(focus);
         const similar = el('button', 'btn', '🔗 More like this');
         similar.addEventListener('click', () => host.openSimilar());
         menu.appendChild(similar);
