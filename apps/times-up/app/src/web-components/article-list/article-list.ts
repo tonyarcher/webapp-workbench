@@ -36,7 +36,6 @@ import {
     updateCols as updateColsLayout,
 } from './article-list-layout';
 import { attachHostListeners, teardownHost } from './article-list-lifecycle';
-import { catchMeUpAction } from './article-list-catch-up';
 import {
     advancedMarkScrollAction,
     advancedUnreadAction,
@@ -136,6 +135,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     declare pageSize: number;
     declare advancedOpen: boolean;
     declare marking: boolean;
+    declare catchUpBudget: number;
     declare advancedAnchor: MenuAnchor | null;
     declare interestingStrictness: number;
     declare loadError: string | null;
@@ -240,6 +240,7 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         defineReactive(this, 'pageSize', DEFAULT_PAGE_SIZE);
         defineReactive(this, 'advancedOpen', false);
         defineReactive(this, 'marking', false);
+        defineReactive(this, 'catchUpBudget', 5);
         defineReactive(this, 'advancedAnchor', null as MenuAnchor | null);
         defineReactive(this, 'interestingStrictness', DEFAULT_INTERESTING_STRICTNESS);
         defineReactive(this, 'loadError', null as string | null);
@@ -556,10 +557,6 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
 
     async onMarkShownRead(): Promise<void> {
         await markShownReadAction(this as never);
-    }
-
-    async onCatchMeUp(): Promise<void> {
-        await catchMeUpAction(this as never);
     }
 }
 

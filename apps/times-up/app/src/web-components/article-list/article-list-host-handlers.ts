@@ -5,6 +5,7 @@ import { setInterestingHideRead } from '../../services/interesting-counts';
 import { invalidateInterestingBatch } from '../../services/interesting-counts-refresh';
 import { clampInterestingStrictness } from '../../services/interesting-words';
 import { loadInterestingStrictness, saveInterestingStrictness } from '../../services/interesting-settings';
+import { loadCatchUpBudget } from '../../services/catch-up';
 import { isIdle } from './article-list-load-state';
 import { applyStep, canLoadMore, loadNextPageAction, needsLibrary, refreshFeedSetKey } from './article-list-loading';
 import { libraryArrived, viewChanged } from './article-list-load-state';
@@ -97,6 +98,7 @@ export function onScroll(host: any): void {
 
 export function loadViewSettings(host: any): void {
     loadViewSettingsFor(host);
+    host.catchUpBudget = loadCatchUpBudget(host.view);
     if (host.view.kind === 'interesting') host.interestingStrictness = loadInterestingStrictness(host.view.id);
 }
 

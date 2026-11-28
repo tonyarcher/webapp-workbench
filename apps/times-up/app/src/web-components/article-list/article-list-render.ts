@@ -55,7 +55,8 @@ export interface ArticleListRenderHost extends HighlightHost {
     openArticle(article: Article): Promise<void>;
     onStar(e: Event, article: Article): Promise<void>;
     onMarkShownRead(): Promise<void>;
-    onCatchMeUp(): Promise<void>;
+    catchUpBudget: number;
+    reset(): Promise<void>;
     onToggleAdvanced(e: Event): void;
     onSearchQuery(q: string): void;
     onSearchScope(scope: string): void;

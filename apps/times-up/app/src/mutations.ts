@@ -454,6 +454,23 @@ export async function markShownRead(articleIds: string[]): Promise<boolean> {
     return true;
 }
 
+export async function markShownUnread(articleIds: string[]): Promise<boolean> {
+    if (!articleIds.length) return true;
+    for (const id of articleIds) updateArticlesInCache(id, { read: 0 });
+    try {
+        await updateArticleState(articleIds.map((id) => ({ id, read: false })));
+    } catch (err) {
+        console.error('markShownUnread failed', err);
+        toastApiError(err, 'Could not restore the articles as unread. Check your connection and try again.');
+        await invalidateArticles();
+        return false;
+    }
+    bustCounts();
+    await invalidateLibrary();
+    await invalidateFrontPage();
+    return true;
+}
+
 export async function markReadBefore(feedIds: string[] | undefined, cutoff: number) {
     await apiReadBefore(feedIds, cutoff);
     await invalidateArticles();

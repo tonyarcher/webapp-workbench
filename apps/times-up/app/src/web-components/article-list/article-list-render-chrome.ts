@@ -1,5 +1,7 @@
 import type { Virtualizer } from '@tanstack/virtual-core';
 import { topWords } from '../../services/interesting-words';
+import { CATCH_UP_BUDGETS } from '../../services/catch-up';
+import { canUndoCatchUp, runCatchUpAction, setCatchUpBudget, undoCatchUpAction } from './article-list-catch-up';
 import { interestingWordMapOf } from './article-list-interesting';
 import type { ArticleSort, ListViewType } from '../../types';
 import type { MenuAnchor } from '../feed-menu/feed-menu';
@@ -121,7 +123,21 @@ export function renderToolbar(host: ArticleListRenderHost): HTMLElement {
     pageSize.title = 'Articles shown at a time';
     actions.appendChild(pageSize);
     actions.appendChild(actionButton('btn', 'Mark shown as read', host.onMarkShownRead.bind(host)));
-    actions.appendChild(actionButton('btn', 'Catch me up (5 min)', host.onCatchMeUp.bind(host)));
+    const catchUpBudget = labeledSelect(
+        'catch-up-budget',
+        'Catch-up minutes',
+        host.catchUpBudget,
+        CATCH_UP_BUDGETS.map((minutes) => [String(minutes), `${minutes} min`]),
+        (e) => setCatchUpBudget(host, Number((e.target as HTMLSelectElement).value)),
+    );
+    catchUpBudget.title = 'Minutes of unread reading to keep in this folder';
+    actions.appendChild(catchUpBudget);
+    actions.appendChild(
+        actionButton('btn', `Catch me up (${host.catchUpBudget} min)`, () => void runCatchUpAction(host)),
+    );
+    if (canUndoCatchUp(host.view)) {
+        actions.appendChild(actionButton('btn', 'Undo catch-up', () => void undoCatchUpAction(host)));
+    }
     actions.appendChild(actionButton('btn', 'Advanced', host.onToggleAdvanced.bind(host)));
     const refresh = el('button', 'btn refresh');
     if (host.refreshing) {

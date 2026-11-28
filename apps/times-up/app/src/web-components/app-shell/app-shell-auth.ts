@@ -11,6 +11,7 @@ import {
     clearAlertSnapshot,
 } from '../../services/alert-notifications';
 import { startBackgroundSync, stopBackgroundSync } from '../../services/background-sync';
+import { clearCatchUpUndo } from '../../services/catch-up';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
 import { forgetLearning } from '../../services/interesting-settings';
 
@@ -83,6 +84,7 @@ export function signOut(host: AppShellAuthHost): void {
     stopAppBadge();
     stopAlertNotifications();
     clearAlertSnapshot();
+    clearCatchUpUndo();
     void stopBackgroundSync();
     void clearAppBadge();
     stopForegroundSync();
