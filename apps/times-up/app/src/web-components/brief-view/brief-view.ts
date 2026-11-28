@@ -1,6 +1,11 @@
 import { fetchArticleById, fetchEdition, fetchEditions } from '../../services/api';
 import { fetchTopClusters } from '../../services/api-clusters';
 import {
+    loadExpandedBriefSections,
+    saveExpandedBriefSections,
+    toggleBriefSection,
+} from '../../services/brief-section-state';
+import {
     diffBriefClusters,
     loadBriefClusterSnapshot,
     saveBriefClusterSnapshot,
@@ -48,6 +53,7 @@ export class BriefView extends HTMLElement {
     private clusterDelta: BriefClusterDelta = { newClusters: [], growingClusters: [] };
     private hasClusterSnapshot = false;
     private deltaReady = false;
+    private expandedSections = loadExpandedBriefSections();
 
     connectedCallback() {
         const shadow = this.attachShadow({ mode: 'open' });
@@ -87,6 +93,16 @@ export class BriefView extends HTMLElement {
         this.paint();
     }
 
+    private toggleSection(id: string): void {
+        this.expandedSections = toggleBriefSection(this.expandedSections, id);
+        saveExpandedBriefSections(this.expandedSections);
+        this.paint();
+        const next = [...(this.root?.querySelectorAll<HTMLButtonElement>('[data-section-toggle]') ?? [])].find(
+            (button) => button.dataset['sectionToggle'] === id,
+        );
+        next?.focus();
+    }
+
     private switchTier(tier: BriefTier) {
         if (tier === this.tier) return;
         this.scrollByTier.set(this.tier, this.scrollTop);
@@ -114,7 +130,7 @@ export class BriefView extends HTMLElement {
             } else {
                 if (this.current.opinion) body.appendChild(this.summaryCard(this.current.opinion));
                 for (const section of this.tiers[this.tier]) {
-                    body.appendChild(this.section(section, this.tier === 'deep' ? this.allSourceIds(section) : []));
+                    body.appendChild(this.section(section, this.allSourceIds(section)));
                 }
             }
         }
@@ -191,6 +207,23 @@ export class BriefView extends HTMLElement {
         const title = document.createElement('h3');
         title.textContent = section.topic ?? section.title;
         node.appendChild(title);
+        const expanded = this.expandedSections.has(section.id);
+        const sourcesId = `brief-sources-${encodeURIComponent(section.id)}`;
+        if (this.tier !== 'deep') {
+            const toggle = document.createElement('button');
+            toggle.className = 'section-sources-toggle';
+            toggle.type = 'button';
+            toggle.textContent = expanded ? 'Hide sources' : 'Show sources';
+            toggle.dataset['sectionToggle'] = section.id;
+            toggle.setAttribute('aria-expanded', String(expanded));
+            toggle.setAttribute('aria-controls', sourcesId);
+            toggle.setAttribute(
+                'aria-label',
+                `${expanded ? 'Hide' : 'Show'} sources for ${section.topic ?? section.title}`,
+            );
+            toggle.addEventListener('click', () => this.toggleSection(section.id));
+            node.appendChild(toggle);
+        }
         if (section.delta === 'new') {
             const badge = document.createElement('span');
             badge.className = 'delta-badge';
@@ -207,7 +240,8 @@ export class BriefView extends HTMLElement {
         list.className = 'excerpts';
         for (const item of section.items) list.appendChild(this.excerpt(item));
         node.appendChild(list);
-        if (sourceIds.length) node.appendChild(this.sources(sourceIds));
+        if (sourceIds.length && (this.tier === 'deep' || expanded))
+            node.appendChild(this.sources(sourceIds, sourcesId));
         return node;
     }
 
@@ -226,9 +260,10 @@ export class BriefView extends HTMLElement {
         return button;
     }
 
-    private sources(ids: string[]): HTMLElement {
+    private sources(ids: string[], id: string): HTMLElement {
         const row = document.createElement('div');
         row.className = 'sources';
+        row.id = id;
         for (const id of ids) {
             const button = document.createElement('button');
             button.className = 'source';

@@ -283,6 +283,25 @@
     line-height: 1.5;
 }
 
+.section-sources-toggle {
+    font: inherit;
+    font-size: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.section-sources-toggle:hover {
+    text-decoration: underline;
+}
+
+.section-sources-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .sources {
     display: flex;
     flex-wrap: wrap;

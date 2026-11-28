@@ -49,6 +49,7 @@ describe('brief view tiers', function () {
             JSON.stringify({ access: 't', refresh: 'r', exp: Math.floor(Date.now() / 1000) + 3600 }),
         );
         localStorage.removeItem('times-up:brief-tier');
+        localStorage.removeItem('times-up:brief-expanded-sections');
         globalThis.fetch = async (input: RequestInfo | URL) => {
             const url = String(input);
             if (url.includes('/editions?')) {
@@ -63,6 +64,7 @@ describe('brief view tiers', function () {
         globalThis.fetch = originalFetch;
         localStorage.removeItem('times-up.auth.tokens');
         localStorage.removeItem('times-up:brief-tier');
+        localStorage.removeItem('times-up:brief-expanded-sections');
     });
 
     it('renders five cited excerpts in the default minute tier', async () => {
@@ -104,6 +106,49 @@ describe('brief view tiers', function () {
             expect(root.querySelectorAll('.sources').length).to.equal(3);
             expect(root.querySelector('.source')?.textContent).to.equal('Source 3-1');
             expect(localStorage.getItem('times-up:brief-tier')).to.equal('deep');
+        } finally {
+            view.remove();
+        }
+    });
+
+    it('expands a section into its source rows and remembers it', async () => {
+        const view = document.createElement('brief-view');
+        document.body.appendChild(view);
+        try {
+            await waitFor(() => view.shadowRoot?.querySelectorAll('.excerpt').length === 5);
+            const root = view.shadowRoot!;
+            const five = [...root.querySelectorAll<HTMLButtonElement>('.tier')].find(
+                (button) => button.textContent === 'Five minutes',
+            );
+            five?.click();
+            await waitFor(() => root.querySelectorAll('.excerpt').length === 9);
+            expect(root.querySelectorAll('.sources').length).to.equal(0);
+            const toggle = root.querySelector<HTMLButtonElement>('.section-sources-toggle');
+            expect(toggle?.textContent).to.equal('Show sources');
+            toggle?.click();
+            await waitFor(() => root.querySelectorAll('.sources').length === 1);
+            expect(root.querySelectorAll('.source').length).to.equal(6);
+            expect(localStorage.getItem('times-up:brief-expanded-sections')).to.contain('s3');
+            const openedToggle = root.querySelector<HTMLButtonElement>('.section-sources-toggle');
+            expect(openedToggle?.textContent).to.equal('Hide sources');
+            expect(openedToggle?.getAttribute('aria-label')).to.contain('Topic 3');
+            expect(root.activeElement).to.equal(openedToggle);
+            expect(openedToggle?.getAttribute('aria-controls')).to.equal(root.querySelector('.sources')?.id);
+            openedToggle?.click();
+            await waitFor(() => root.querySelectorAll('.sources').length === 0);
+        } finally {
+            view.remove();
+        }
+    });
+
+    it('restores expanded sections from local storage', async () => {
+        localStorage.setItem('times-up:brief-tier', 'five');
+        localStorage.setItem('times-up:brief-expanded-sections', JSON.stringify(['s3']));
+        const view = document.createElement('brief-view');
+        document.body.appendChild(view);
+        try {
+            await waitFor(() => view.shadowRoot?.querySelectorAll('.sources').length === 1);
+            expect(view.shadowRoot?.querySelectorAll('.source').length).to.equal(6);
         } finally {
             view.remove();
         }

@@ -109,6 +109,7 @@ await import('./smoke-coverage-balance.js');
 await import('./smoke-reader-mode.js');
 await import('./smoke-cluster-members.js');
 await import('./smoke-brief-delta.js');
+await import('./smoke-brief-sections.js');
 await import('./smoke-mcp.js');
 await import('./smoke-share.js');
 await import('./smoke-share-target.js');
