@@ -2,6 +2,7 @@ import { articleLink, history, navigate, parseArticleId, parsePath, viewToPath }
 import type { Command, CommandContext } from '../../services/commands';
 import { dismissToast, onToast, type ToastNotice } from '../../services/toast';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
+import { startAppBadge, stopAppBadge } from '../../services/app-badge';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { currentUsername, hasSession } from '../../services/auth';
 import { fetchArticleById } from '../../services/api';
@@ -180,6 +181,7 @@ export class AppShell extends HTMLElement {
         });
         if (this.authed) {
             startInterestingCountsRefresh();
+            startAppBadge();
             startForegroundSync(this.autoSyncFeedIds);
             void this.resolveDeepLink();
         }
@@ -195,6 +197,7 @@ export class AppShell extends HTMLElement {
 
     disconnectedCallback() {
         stopInterestingCountsRefresh();
+        stopAppBadge();
         stopForegroundSync();
         this.unsubscribeToasts?.();
         this.unsubscribeToasts = null;

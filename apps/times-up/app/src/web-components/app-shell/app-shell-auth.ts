@@ -4,6 +4,7 @@ import { currentUsername, hasSession, logout, startLogin } from '../../services/
 import { clearToasts, type ToastNotice } from '../../services/toast';
 import { startForegroundSync, stopForegroundSync } from '../../services/foreground-sync';
 import { startInterestingCountsRefresh, stopInterestingCountsRefresh } from '../../services/interesting-counts-refresh';
+import { startAppBadge, stopAppBadge, clearAppBadge } from '../../services/app-badge';
 import { invalidateStarredTitles } from '../../services/interesting-starred';
 import { forgetLearning } from '../../services/interesting-settings';
 
@@ -47,9 +48,11 @@ export function onAuthChanged(host: AppShellAuthHost): void {
     clearToasts();
     if (host.authed) {
         startInterestingCountsRefresh();
+        startAppBadge();
         startForegroundSync(host.autoSyncFeedIds);
     } else {
         stopInterestingCountsRefresh();
+        stopAppBadge();
         stopForegroundSync();
     }
 }
@@ -67,6 +70,8 @@ export function signIn(host: AppShellAuthHost): void {
 
 export function signOut(host: AppShellAuthHost): void {
     stopInterestingCountsRefresh();
+    stopAppBadge();
+    void clearAppBadge();
     stopForegroundSync();
     void resetAccount(host).catch(() => {
         host.authError = 'Signed out on this device, but some local data could not be cleared.';
@@ -106,6 +111,7 @@ async function resetAccount(host: AppShellAuthHost): Promise<void> {
     host.username = null;
     host.localDataClearFailed = false;
     document.title = 'Times Up';
+    void clearAppBadge();
     clearToasts();
     host.authError = ended
         ? ''
