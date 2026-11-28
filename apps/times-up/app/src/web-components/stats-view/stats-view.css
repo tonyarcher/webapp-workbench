@@ -4,6 +4,28 @@
 .toolbar {
     margin-bottom: 0.5rem;
 }
+.toolbar-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.btn {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+}
+.btn:hover {
+    background: var(--hover);
+}
+.btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
 .body {
     overflow: auto;
 }

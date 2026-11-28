@@ -1,5 +1,7 @@
 import { getAllArticles } from '../../db/db-query';
 import { loadFocusStreak } from '../../services/focus-session';
+import { downloadBlob } from '../../services/citation';
+import { statsCsv, statsJson, summarizeStats } from '../../services/stats-export';
 import { readMinutes } from '../../util';
 import type { Article } from '../../types';
 import styles from './stats-view.css?inline';
@@ -50,6 +52,17 @@ export class StatsView extends HTMLElement {
         return [...map.entries()].map(([topic, count]) => ({ topic, count })).sort((a, b) => b.count - a.count);
     }
 
+    private downloadStats(format: 'json' | 'csv'): void {
+        const summary = summarizeStats(this.articles, loadFocusStreak().kept);
+        const json = format === 'json';
+        downloadBlob(
+            new Blob([json ? statsJson(summary) : statsCsv(summary)], {
+                type: json ? 'application/json' : 'text/csv',
+            }),
+            `times-up-stats.${format}`,
+        );
+    }
+
     private paint() {
         if (!this.root) return;
         this.root.replaceChildren();
@@ -58,6 +71,18 @@ export class StatsView extends HTMLElement {
         const h = document.createElement('h2');
         h.textContent = 'Mastery stats';
         toolbar.appendChild(h);
+        if (!this.loading) {
+            const actions = document.createElement('div');
+            actions.className = 'toolbar-actions';
+            for (const format of ['json', 'csv'] as const) {
+                const button = document.createElement('button');
+                button.className = 'btn';
+                button.textContent = `Download ${format.toUpperCase()}`;
+                button.addEventListener('click', () => this.downloadStats(format));
+                actions.appendChild(button);
+            }
+            toolbar.appendChild(actions);
+        }
         this.root.appendChild(toolbar);
         const body = document.createElement('div');
         body.className = 'body';
