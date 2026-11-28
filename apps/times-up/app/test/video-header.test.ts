@@ -45,11 +45,27 @@ describe('video-header', () => {
         expect(opens).to.equal(1);
     });
 
+    it('opens the article from the poster with Enter and Space', () => {
+        el = mount();
+        const poster = el.shadowRoot!.querySelector<HTMLImageElement>('img.poster')!;
+        expect(poster.tabIndex).to.equal(0);
+        expect(poster.getAttribute('role')).to.equal('button');
+        expect(poster.getAttribute('aria-label')).to.equal('Open A video article');
+        let opens = 0;
+        el.addEventListener('click', () => {
+            opens += 1;
+        });
+        poster.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+        poster.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true }));
+        expect(opens).to.equal(2);
+    });
+
     it('sizes the embedded player with the .player class', () => {
         el = mount();
         el.mode = 'embed';
         const frame = el.shadowRoot!.querySelector<HTMLIFrameElement>('iframe')!;
         expect(frame.className).to.equal('player');
+        expect(frame.parentElement?.classList.contains('poster-wrap')).to.equal(true);
         expect(frame.src).to.equal(video.embedUrl);
     });
 });

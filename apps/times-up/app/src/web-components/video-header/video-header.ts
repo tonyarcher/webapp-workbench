@@ -95,23 +95,36 @@ export class VideoHeader extends HTMLElement {
         // article view. This reverses the regression from the vanilla refactor.
         const img = document.createElement('img');
         img.className = 'poster poster-link';
+        img.tabIndex = 0;
+        img.setAttribute('role', 'button');
+        img.setAttribute('aria-label', `Open ${this.videoTitle}`);
         const posterUrl = this.video.posters[this.posterIndex];
         if (posterUrl) img.src = posterUrl;
         img.alt = this.videoTitle;
         img.addEventListener('load', (e) => this.onPosterLoad(e.target as HTMLImageElement));
         img.addEventListener('error', () => this.onPosterError());
+        img.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            img.click();
+        });
         this.root.appendChild(img);
     }
 
     private renderPlayer() {
         if (!this.root || !this.video) return;
+        // The host height can come from aspect-ratio, so a percentage-height
+        // iframe needs a definite, positioned parent to fill it.
+        const wrap = document.createElement('div');
+        wrap.className = 'poster-wrap';
         const iframe = document.createElement('iframe');
         iframe.className = 'player';
         iframe.src = this.video.embedUrl;
         iframe.title = this.videoTitle;
         iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
         iframe.allowFullscreen = true;
-        this.root.appendChild(iframe);
+        wrap.appendChild(iframe);
+        this.root.appendChild(wrap);
     }
 }
 
