@@ -18,6 +18,8 @@ export interface ArticleListRenderHost extends HighlightHost {
     unreadOnly: boolean;
     hideRead: boolean;
     markOnScroll: boolean;
+    priorityOnly: boolean;
+    priorityHidden: number;
     sort: ArticleSort;
     listView: ListViewType;
     slideshowIndex: number;

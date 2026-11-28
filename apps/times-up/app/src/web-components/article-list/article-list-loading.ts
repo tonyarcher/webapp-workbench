@@ -7,6 +7,7 @@ import { applyResumeAction, insertArticleForReveal } from './article-list-target
 import { folderFeedsOf, virtualizerOptionsFor } from './article-list-helpers';
 import { fetchLibrary, libraryKey, queryClient } from '../../query';
 import { clearSelectionAction } from './article-list-selection';
+import { partitionPriorityArticles } from '../../services/priority-inbox';
 
 /** Everything the list loader reads and writes on the component. */
 export interface LoadingHost {
@@ -24,6 +25,8 @@ export interface LoadingHost {
     selectedIds: string[];
     selectAnchor: number;
     hideRead: boolean;
+    priorityOnly: boolean;
+    priorityHidden: number;
     sort: ArticleSort;
     pageSize: number;
     listView: ListViewType;
@@ -62,6 +65,7 @@ export function clearList(host: LoadingHost): void {
     host.items = [];
     host.loadError = null;
     host.mutedHidden = 0;
+    host.priorityHidden = 0;
     host.lastAutoMark = 0;
     clearSelectionAction(host);
     host.cursors.clear();
@@ -93,6 +97,7 @@ export function reinitVirtualizer(host: LoadingHost): void {
 export async function runLoad(host: LoadingHost, gen: number): Promise<void> {
     try {
         await loadPageSource(host, gen);
+        applyPriorityFilter(host);
         if (host.deepLinkArticle) host.items = insertArticleForReveal(host.items, host.deepLinkArticle, host.sort);
         applyResumeAction(host as never);
     } catch (err) {
@@ -105,6 +110,16 @@ export async function runLoad(host: LoadingHost, gen: number): Promise<void> {
         host.loadState = step.state;
         if (step.start !== null) void runLoad(host, step.start);
     }
+}
+
+function applyPriorityFilter(host: LoadingHost): void {
+    if (!host.priorityOnly) {
+        host.priorityHidden = 0;
+        return;
+    }
+    const { keep, hidden } = partitionPriorityArticles(host.items);
+    host.items = keep;
+    host.priorityHidden += hidden.length;
 }
 
 async function loadPageSource(host: LoadingHost, gen: number): Promise<void> {

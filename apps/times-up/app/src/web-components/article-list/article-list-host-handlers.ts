@@ -71,7 +71,7 @@ export function syncInterestingCount(host: any, changed: Map<string, unknown>): 
 export function currentViewKey(host: any): string {
     const strict = host.view.kind === 'interesting' ? `|strict:${host.interestingStrictness}` : '';
     const search = host.view.kind === 'search' ? `|search:${host.searchScope}` : '';
-    return `${JSON.stringify(host.view)}|${host.unreadOnly}|${host.sort}|${host.listView}|${host.pageSize}${strict}${search}`;
+    return `${JSON.stringify(host.view)}|${host.unreadOnly}|${host.sort}|${host.listView}|${host.pageSize}|priority:${host.priorityOnly}${strict}${search}`;
 }
 
 export function handleUpdate(host: any, viewKey: string): void {
@@ -116,6 +116,7 @@ export function applyAllViewsAction(host: any): void {
         unreadOnly: host.unreadOnly,
         hideRead: host.view?.kind === 'interesting' ? host.hideRead : false,
         markOnScroll: host.markOnScroll,
+        priorityOnly: host.priorityOnly,
     });
     applyDefaultToAllViews(settings);
     window.dispatchEvent(new CustomEvent('view-settings-changed'));
@@ -133,6 +134,11 @@ export function toggleUnread(host: any): void {
         return;
     }
     host.unreadOnly = !host.unreadOnly;
+    saveViewSettings(host);
+}
+
+export function togglePriorityOnly(host: any): void {
+    host.priorityOnly = !host.priorityOnly;
     saveViewSettings(host);
 }
 

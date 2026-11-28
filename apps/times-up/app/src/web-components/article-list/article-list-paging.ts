@@ -5,6 +5,8 @@ import { interleaveArticles } from '../../util';
 import { searchQuery } from './article-list-search';
 import type { Article, ArticleSort, Feed, View } from '../../types';
 
+const PRIORITY_SCAN_LIMIT = 10_000;
+
 function mergeSorted(current: Article[], incoming: Article[], sort: ArticleSort): Article[] {
     const seen = new Map(current.map((a) => [a.id, a]));
     for (const article of incoming) seen.set(article.id, article);
@@ -103,19 +105,27 @@ export async function fetchSinglePage(
     pageSize: number,
     items: Article[],
     lookup: FeedFolderLookup = {},
+    priorityOnly = false,
 ): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined; mutedHidden: number }> {
     const key = feedId ?? 'all';
     const cursor = cursors.get(key);
     const scope = feedId ? `feed:${feedId}` : undefined;
-    const res = await fetchArticlesPage({ scope, unreadOnly: unreadOnly || hideRead, sort, limit: pageSize, cursor });
+    const res = await fetchArticlesPage({
+        scope,
+        unreadOnly: unreadOnly || hideRead,
+        sort,
+        limit: priorityOnly ? PRIORITY_SCAN_LIMIT : pageSize,
+        cursor,
+    });
     const next = res.nextCursor;
-    const merged = capItems(mergeSorted(items, res.items, sort), pageSize);
-    const nextItems = filterMutedArticles(merged, loadMuteRules(), lookup);
+    const merged = mergeSorted(items, res.items, sort);
+    const capped = priorityOnly ? merged : capItems(merged, pageSize);
+    const nextItems = filterMutedArticles(capped, loadMuteRules(), lookup);
     return {
         items: nextItems,
-        hasMore: next !== undefined,
+        hasMore: priorityOnly ? false : next !== undefined,
         nextCursor: next,
-        mutedHidden: merged.length - nextItems.length,
+        mutedHidden: capped.length - nextItems.length,
     };
 }
 
@@ -128,23 +138,25 @@ export async function fetchFolderPage(
     pageSize: number,
     items: Article[],
     lookup: FeedFolderLookup = {},
+    priorityOnly = false,
 ): Promise<{ items: Article[]; hasMore: boolean; nextCursor?: string | undefined; mutedHidden: number }> {
     const cursor = cursors.get(folderKey);
     const res = await fetchArticlesPage({
         scope: folderKey,
         unreadOnly: unreadOnly || hideRead,
         sort,
-        limit: pageSize,
+        limit: priorityOnly ? PRIORITY_SCAN_LIMIT : pageSize,
         cursor,
     });
     const next = res.nextCursor;
-    const merged = capItems(mergeSorted(items, res.items, sort), pageSize);
-    const nextItems = filterMutedArticles(merged, loadMuteRules(), lookup);
+    const merged = mergeSorted(items, res.items, sort);
+    const capped = priorityOnly ? merged : capItems(merged, pageSize);
+    const nextItems = filterMutedArticles(capped, loadMuteRules(), lookup);
     return {
         items: nextItems,
-        hasMore: next !== undefined,
+        hasMore: priorityOnly ? false : next !== undefined,
         nextCursor: next,
-        mutedHidden: merged.length - nextItems.length,
+        mutedHidden: capped.length - nextItems.length,
     };
 }
 
@@ -269,6 +281,7 @@ export interface PageHost {
     feedHasMore: Map<string, boolean>;
     feedWindowOffset: number;
     mutedHidden: number;
+    priorityOnly: boolean;
     library: { data?: { feeds: Feed[] } };
 }
 
@@ -323,6 +336,7 @@ export async function loadSinglePageAction(host: PageHost, gen: number): Promise
         host.pageSize,
         host.items,
         lookup,
+        host.priorityOnly,
     );
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;
@@ -344,6 +358,7 @@ export async function loadFolderPageAction(host: PageHost, gen: number): Promise
         host.pageSize,
         host.items,
         lookup,
+        host.priorityOnly,
     );
     if (gen !== host.gen) return;
     host.hasMoreSingle = res.hasMore;

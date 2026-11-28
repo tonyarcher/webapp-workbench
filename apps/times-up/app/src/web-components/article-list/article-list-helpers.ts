@@ -18,6 +18,7 @@ export interface ViewSettings {
     unreadOnly: boolean;
     hideRead: boolean;
     markOnScroll: boolean;
+    priorityOnly: boolean;
 }
 
 /** Built-in reading defaults, used until the reader saves their own. */
@@ -29,6 +30,7 @@ export const DEFAULT_VIEW_SETTINGS: ViewSettings = {
     unreadOnly: false,
     hideRead: false,
     markOnScroll: false,
+    priorityOnly: false,
 };
 
 export function clampPageSize(n: unknown): number {
@@ -54,6 +56,7 @@ export function normalizeViewSettings(input: Partial<ViewSettings> | null | unde
         unreadOnly: input?.unreadOnly === true,
         hideRead: input?.hideRead === true,
         markOnScroll: input?.markOnScroll === true,
+        priorityOnly: input?.priorityOnly === true,
     };
 }
 
@@ -200,6 +203,7 @@ interface SettingsHost {
     unreadOnly: boolean;
     hideRead: boolean;
     markOnScroll: boolean;
+    priorityOnly: boolean;
     updateCols(): void;
 }
 
@@ -216,6 +220,7 @@ function applyViewSettings(host: SettingsHost, saved: ViewSettings): void {
     // views. Only persist it for Interesting, where it is the unread filter.
     host.hideRead = host.view.kind === 'interesting' ? settings.hideRead : false;
     host.markOnScroll = settings.markOnScroll;
+    host.priorityOnly = (host.view.kind === 'folder' || host.view.kind === 'feed') && settings.priorityOnly;
     host.updateCols();
 }
 
@@ -239,6 +244,7 @@ export function saveViewSettingsFor(host: SettingsHost): void {
         unreadOnly: host.unreadOnly,
         hideRead: host.view.kind === 'interesting' ? host.hideRead : false,
         markOnScroll: host.markOnScroll,
+        priorityOnly: (host.view.kind === 'folder' || host.view.kind === 'feed') && host.priorityOnly,
     };
     try {
         localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(map));

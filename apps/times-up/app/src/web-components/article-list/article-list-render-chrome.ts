@@ -8,6 +8,7 @@ import type { MenuAnchor } from '../feed-menu/feed-menu';
 import { append, el } from './article-list-dom';
 import type { ArticleListRenderHost } from './article-list-render';
 import { renderCardRow, renderHeadlineRow, renderRow } from './article-list-render-rows';
+import { togglePriorityOnly } from './article-list-host-handlers';
 
 type VirtualItems = ReturnType<Virtualizer<HTMLDivElement, HTMLDivElement>['getVirtualItems']>;
 
@@ -123,6 +124,12 @@ export function renderToolbar(host: ArticleListRenderHost): HTMLElement {
     pageSize.title = 'Articles shown at a time';
     actions.appendChild(pageSize);
     actions.appendChild(actionButton('btn', 'Mark shown as read', host.onMarkShownRead.bind(host)));
+    if (host.view.kind === 'folder' || host.view.kind === 'feed') {
+        const priority = actionButton('btn', 'Must-read only', () => togglePriorityOnly(host));
+        priority.setAttribute('aria-pressed', String(host.priorityOnly));
+        priority.title = 'Show only articles combining interest, worthiness, and recency';
+        actions.appendChild(priority);
+    }
     const catchUpBudget = labeledSelect(
         'catch-up-budget',
         'Catch-up minutes',
@@ -383,6 +390,11 @@ function renderScrollFooter(host: ArticleListRenderHost): Array<Node | null> {
 }
 
 function emptyText(host: ArticleListRenderHost): string {
+    if (host.priorityOnly) {
+        return host.priorityHidden > 0
+            ? 'No must-read articles in this view. Turn off Must-read only to see everything.'
+            : 'No must-read articles in this view.';
+    }
     if (!host.interestingActive())
         return emptyTextFor(host.unreadOnly, host.hideRead, false, false, host.mutedHidden, host.canUndoMute());
     if (host.unreadOnly || host.hideRead)

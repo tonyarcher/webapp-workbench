@@ -278,10 +278,12 @@ assert(
         maxCardCols: 2,
         unreadOnly: true,
         hideRead: true,
+        priorityOnly: true,
     });
     assert(readDefaultViewSettings().listView === 'cards', 'reading defaults round-trip the list view');
     assert(readDefaultViewSettings().maxCardCols === 2, 'reading defaults round-trip the card columns');
     assert(readDefaultViewSettings().hideRead === true, 'reading defaults round-trip the hide-read filter');
+    assert(readDefaultViewSettings().priorityOnly === true, 'reading defaults round-trip the must-read filter');
 
     const freshHost = () => ({
         view: { kind: 'folder' as 'folder' | 'feed' | 'interesting', id: 'fresh' },
@@ -292,6 +294,7 @@ assert(
         unreadOnly: false,
         hideRead: false,
         markOnScroll: false,
+        priorityOnly: false,
         updateCols: () => {},
     });
     const fresh = freshHost();
@@ -299,9 +302,16 @@ assert(
     assert(fresh.listView === 'cards', 'an untouched view picks up the reading defaults');
     assert(fresh.unreadOnly === true, 'an untouched view picks up the default unread filter');
     assert(fresh.hideRead === false, 'normal views ignore the default hide-read filter');
+    assert(fresh.priorityOnly === true, 'an untouched view picks up the default must-read filter');
 
     const own = freshHost();
-    saveViewSettingsFor({ ...own, view: { kind: 'feed', id: 'own' }, listView: 'headline', pageSize: 100 } as never);
+    saveViewSettingsFor({
+        ...own,
+        view: { kind: 'feed', id: 'own' },
+        listView: 'headline',
+        pageSize: 100,
+        priorityOnly: true,
+    } as never);
     loadViewSettingsFor(own as never);
     assert(own.listView === 'cards', 'a different untouched view still uses the defaults');
 
@@ -310,6 +320,7 @@ assert(
     loadViewSettingsFor(overridden as never);
     assert(overridden.listView === 'headline', 'a view with its own settings keeps them');
     assert(overridden.pageSize === 100, 'a view with its own settings keeps its page size');
+    assert(overridden.priorityOnly === true, 'a view with its own settings keeps its must-read filter');
 
     applyDefaultToAllViews({
         ...DEFAULT_VIEW_SETTINGS,
@@ -319,12 +330,14 @@ assert(
         maxCardCols: 3,
         unreadOnly: false,
         hideRead: false,
+        priorityOnly: false,
     });
     const afterApply = freshHost();
     afterApply.view = { kind: 'feed', id: 'own' };
     loadViewSettingsFor(afterApply as never);
     assert(afterApply.listView === 'headline', 'apply to all views clears the per-view override');
     assert(afterApply.sort === 'newest', 'apply to all views writes the new default sort');
+    assert(afterApply.priorityOnly === false, 'apply to all views writes the new default must-read filter');
 
     const interestingSettings = readViewSettingsFor({ kind: 'interesting', id: 'fresh' });
     assert(interestingSettings.listView === 'headline', 'Interesting views use the reading defaults');

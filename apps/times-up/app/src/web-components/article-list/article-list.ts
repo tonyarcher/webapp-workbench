@@ -126,6 +126,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     declare unreadOnly: boolean;
     declare hideRead: boolean;
     declare markOnScroll: boolean;
+    declare priorityOnly: boolean;
+    declare priorityHidden: number;
     declare selectedIds: string[];
     declare sort: ArticleSort;
     declare cursor: number;
@@ -178,7 +180,6 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
     feedWindowOffset = 0;
     refreshJobs = new Map<string, Promise<void>>();
     pendingFeedsRefresh = false;
-    /** Folder whose transient hide-read state is mirrored for count refresh. */
     interestingHideReadFolderId: string | null = null;
 
     private readonly controllers = new Set<ReactiveController>();
@@ -231,6 +232,8 @@ export class ArticleList extends HTMLElement implements ReactiveControllerHost {
         defineReactive(this, 'unreadOnly', false);
         defineReactive(this, 'hideRead', false);
         defineReactive(this, 'markOnScroll', false);
+        defineReactive(this, 'priorityOnly', false);
+        defineReactive(this, 'priorityHidden', 0);
         defineReactive(this, 'selectedIds', [] as string[]);
         defineReactive(this, 'sort', 'hot' as ArticleSort);
         defineReactive(this, 'cursor', -1);
