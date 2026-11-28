@@ -7,19 +7,9 @@ const PERIODIC_TAG = 'times-up-periodic';
 const WAKE_MESSAGE = 'times-up:background-sync';
 const PERIODIC_INTERVAL_MS = 12 * 60 * 60 * 1000;
 
-interface SyncManager {
-    register(tag: string): Promise<void>;
-    unregister(tag: string): Promise<boolean>;
-}
-
-interface PeriodicSyncManager {
-    register(tag: string, options: { minInterval: number }): Promise<void>;
-    unregister(tag: string): Promise<boolean>;
-}
-
 type SyncRegistration = ServiceWorkerRegistration & {
-    sync?: SyncManager;
-    periodicSync?: PeriodicSyncManager;
+    sync?: unknown;
+    periodicSync?: unknown;
 };
 
 let wake: (() => void) | null = null;
@@ -36,26 +26,42 @@ function onMessage(event: MessageEvent): void {
 }
 
 async function registration(): Promise<SyncRegistration | null> {
-    if (!('serviceWorker' in navigator)) return null;
-    return (await navigator.serviceWorker.getRegistration().catch(() => null)) ?? null;
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null;
+    const worker = navigator.serviceWorker;
+    if (!worker || typeof worker.getRegistration !== 'function') return null;
+    return (await worker.getRegistration().catch(() => null)) ?? null;
+}
+
+/** Browsers expose partial Sync APIs; ignore missing or non-function methods. */
+async function invoke(manager: unknown, method: 'register' | 'unregister', ...args: unknown[]): Promise<void> {
+    if (!manager || typeof manager !== 'object') return;
+    const fn = (manager as Record<string, unknown>)[method];
+    if (typeof fn !== 'function') return;
+    try {
+        await (fn as (...values: unknown[]) => Promise<unknown>).apply(manager, args);
+    } catch {
+        // Unsupported or rejected browser registration; foreground sync remains.
+    }
 }
 
 async function register(reg: SyncRegistration): Promise<void> {
-    await reg.sync?.register(SYNC_TAG).catch(() => {});
-    await reg.periodicSync?.register(PERIODIC_TAG, { minInterval: PERIODIC_INTERVAL_MS }).catch(() => {});
+    await invoke(reg.sync, 'register', SYNC_TAG);
+    await invoke(reg.periodicSync, 'register', PERIODIC_TAG, { minInterval: PERIODIC_INTERVAL_MS });
 }
 
 async function unregister(reg: SyncRegistration): Promise<void> {
-    await reg.sync?.unregister(SYNC_TAG).catch(() => false);
-    await reg.periodicSync?.unregister(PERIODIC_TAG).catch(() => false);
+    await invoke(reg.sync, 'unregister', SYNC_TAG);
+    await invoke(reg.periodicSync, 'unregister', PERIODIC_TAG);
 }
 
 /** Register when supported, and forward worker wakes to the tab's sync loop. */
 export function startBackgroundSync(onWake: () => void): Promise<void> {
     return enqueue(async () => {
-        if (typeof window === 'undefined' || !('serviceWorker' in navigator) || wake) return;
+        if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+        const worker = navigator.serviceWorker;
+        if (!worker || typeof worker.addEventListener !== 'function' || wake) return;
         wake = onWake;
-        navigator.serviceWorker.addEventListener('message', onMessage);
+        worker.addEventListener('message', onMessage);
         const reg = await registration();
         if (reg) await register(reg);
     });
@@ -65,8 +71,10 @@ export function startBackgroundSync(onWake: () => void): Promise<void> {
 export function stopBackgroundSync(): Promise<void> {
     return enqueue(async () => {
         wake = null;
-        if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.removeEventListener('message', onMessage);
+        if (typeof navigator === 'undefined') return;
+        const worker = navigator.serviceWorker;
+        if (!worker || typeof worker.removeEventListener !== 'function') return;
+        worker.removeEventListener('message', onMessage);
         const reg = await registration();
         if (reg) await unregister(reg);
     });

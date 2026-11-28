@@ -39,10 +39,12 @@ const registration = {
     },
 };
 
+let currentRegistration: unknown = registration;
+
 const serviceWorker = {
     getRegistration: async () => {
         if (registrationGate) await registrationGate;
-        return registration;
+        return currentRegistration;
     },
     addEventListener: (_type: string, next: Listener) => {
         listener = next;
@@ -99,6 +101,11 @@ assert(
     'sign-out unregisters after an in-flight start',
 );
 assert(listener === null, 'an interleaved sign-out leaves no listener');
+
+currentRegistration = { sync: { unregister: true }, periodicSync: {} };
+await startBackgroundSync(() => {});
+await stopBackgroundSync();
+assert(listener === null, 'partial sync managers without callable methods degrade quietly');
 
 Object.defineProperty(globalThis, 'navigator', { value: {}, configurable: true });
 await startBackgroundSync(() => {});
