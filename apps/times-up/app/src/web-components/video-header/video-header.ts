@@ -91,25 +91,22 @@ export class VideoHeader extends HTMLElement {
 
     private renderPreview() {
         if (!this.root || !this.video) return;
-        const link = this.videoLink ?? '#';
-        const a = document.createElement('a');
-        a.href = link;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
+        // No watch-page link: a poster click bubbles to the row and opens the
+        // article view. This reverses the regression from the vanilla refactor.
         const img = document.createElement('img');
-        img.className = 'poster';
+        img.className = 'poster poster-link';
         const posterUrl = this.video.posters[this.posterIndex];
         if (posterUrl) img.src = posterUrl;
         img.alt = this.videoTitle;
         img.addEventListener('load', (e) => this.onPosterLoad(e.target as HTMLImageElement));
         img.addEventListener('error', () => this.onPosterError());
-        a.appendChild(img);
-        this.root.appendChild(a);
+        this.root.appendChild(img);
     }
 
     private renderPlayer() {
         if (!this.root || !this.video) return;
         const iframe = document.createElement('iframe');
+        iframe.className = 'player';
         iframe.src = this.video.embedUrl;
         iframe.title = this.videoTitle;
         iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
