@@ -251,6 +251,16 @@
     flex: none;
 }
 
+.quality-badge {
+    flex: none;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--badge-text);
+    background: var(--badge-bg);
+}
+
 .scroll {
     flex: 1;
     overflow-y: auto;

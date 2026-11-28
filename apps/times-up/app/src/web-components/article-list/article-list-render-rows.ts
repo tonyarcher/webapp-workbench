@@ -4,6 +4,7 @@ import { articleImage, cardPlaceholderStyle } from '../../services/image';
 import { articleVideo, watchUrlFor } from '../../services/video';
 import { readMinutes, domainOf, formatDate } from '../../util';
 import { isDeranked } from '../../services/interesting-settings';
+import { contentQuality } from '../../services/content-quality';
 import type { Article } from '../../types';
 import { append, el, svgIcon } from './article-list-dom';
 import {
@@ -279,6 +280,14 @@ function detailTitleRow(
     return row;
 }
 
+function qualityBadge(article: Article): HTMLElement | null {
+    const quality = contentQuality(article);
+    if (!quality) return null;
+    const badge = el('span', `quality-badge quality-${quality.kind}`, quality.label);
+    badge.title = `${quality.label}: this row may not be finishable.`;
+    return badge;
+}
+
 function detailMeta(
     article: Article,
     showFeed: boolean,
@@ -294,6 +303,7 @@ function detailMeta(
         el('span', 'meta-date', formatDate(article.published)),
         minutes > 0 ? el('span', 'meta-time', `${minutes} min read`) : null,
         article.author ? el('span', 'meta-author', `by ${article.author}`) : null,
+        qualityBadge(article),
         highlightToggle(minutes, highlight),
         link ? origLink(link) : null,
     ];
@@ -349,6 +359,7 @@ export function headlineRowTemplate(
         openButton(article, 'title title-open', onOpen),
         highlightToggle(minutes, highlight),
         el('span', 'headline-date', `${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}`),
+        qualityBadge(article),
         derankButton(article),
         starButton(article, onStar),
     );
@@ -414,6 +425,7 @@ export function cardRowTemplate(
         showFeed ? feedLabel(feedTitle) : null,
         el('span', 'meta-domain', domainOf(article.link)),
         el('span', 'meta-date', `${formatDate(article.published)}${minutes > 0 ? ` · ${minutes} min` : ''}`),
+        qualityBadge(article),
         link ? origLink(link) : null,
     );
     body.appendChild(meta);
