@@ -14,6 +14,7 @@ import {
     type TodaySettings,
 } from '../../services/today-settings';
 import { buildTodaySections, type TodaySection } from '../../services/today';
+import { buildCoverageBar } from './today-view-coverage';
 import '../lazy-img/lazy-img';
 import '../video-header/video-header';
 import type { Article, Feed, Folder } from '../../types';
@@ -278,6 +279,7 @@ export class TodayView extends HTMLElement {
     private section(section: TodaySection): HTMLElement {
         const out = el('section', 'today-section');
         out.appendChild(el('h3', 'section-head', section.folder.title));
+        out.appendChild(buildCoverageBar(section.articles, this.feeds));
         const list = el('div', `section-articles ${this.settings.listView}`);
         for (const article of section.articles) {
             list.appendChild(this.item(article, this.settings.listView));

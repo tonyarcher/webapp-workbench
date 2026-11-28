@@ -105,6 +105,7 @@ await import('./smoke-portable-export.js');
 await import('./smoke-archive-import.js');
 await import('./smoke-content-quality.js');
 await import('./smoke-stats-export.js');
+await import('./smoke-coverage-balance.js');
 await import('./smoke-mcp.js');
 await import('./smoke-share.js');
 await import('./smoke-share-target.js');
